@@ -9,12 +9,37 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
 		
 		<meta charset="UTF-8">
+
+		<style>
+			html {
+				height: 100%;
+				padding: 0;
+			}
+			body {
+				height: 100%;
+				margin: 0;
+				
+				background: rgba(0,0,0,1);
+				background: -moz-linear-gradient(top, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
+				background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(0,0,0,1)), color-stop(51%, rgba(14,14,20,1)), color-stop(100%, rgba(0,0,0,1)));
+				background: -webkit-linear-gradient(top, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
+				background: -o-linear-gradient(top, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
+				background: -ms-linear-gradient(top, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
+				background: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
+				filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#000000', endColorstr='#000000', GradientType=0 );
+
+
+				color: #fff;
+			}
+		</style>
 	</head>
 	<body onload="init();">
-		<div id="rooms">
-		</div>
-		<p class="fpsCounter">? FPS</p>
-		<canvas id="mainCanvas" width="648" height="648"></canvas>
+		<center>
+			<div id="rooms">
+			</div>
+			<p class="fpsCounter">? FPS</p>
+			<canvas id="mainCanvas"></canvas>
+		</center>
 
 		<script src="js/game.js"></script>
 	</body>
