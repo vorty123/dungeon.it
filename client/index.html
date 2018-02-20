@@ -18,7 +18,7 @@
 			body {
 				height: 100%;
 				margin: 0;
-				
+
 				background: rgba(0,0,0,1);
 				background: -moz-linear-gradient(top, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
 				background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(0,0,0,1)), color-stop(51%, rgba(14,14,20,1)), color-stop(100%, rgba(0,0,0,1)));
@@ -30,6 +30,16 @@
 
 
 				color: #fff;
+			}
+
+			#mainCanvas {
+				image-rendering: pixelated;
+				display:block;
+			}
+
+			.fpsCounter {
+				position: absolute;
+				top: 0;
 			}
 		</style>
 	</head>

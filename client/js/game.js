@@ -25,27 +25,33 @@ var queue;
 var xSize = 21
 var ySize = 21
 
+function resizeCanvas()
+{
+	$("#mainCanvas").attr("style", "height: " + Math.min(window.innerHeight, window.innerWidth) + "px;")
+}
+
 function init()
 {
 	stage = new createjs.Stage("mainCanvas");
 
 	stage.canvas.width = xSize*32
 	stage.canvas.height = ySize*32
-	
+
+	window.addEventListener('resize', resizeCanvas, false);
+	resizeCanvas()
+
 	queue = new createjs.LoadQueue(true);
 	queue.on("complete", handleComplete, this);
 	queue.on("fileload", handleFileLoad, this);
 
 	queue.loadFile({id:"levelbase", src:"img/levelbase.png"});
-	queue.loadFile({id:"body_sheet", src:"img/body_sheet.png"});
-	queue.loadFile({id:"head_sheet", src:"img/head_sheet.png"});
+	queue.loadFile({id:"player_sheet", src:"img/player_sheet.png"});
 
 	queue.load();
 }
 
 var levelBaseSheet;
-var bodySheet;
-var headSheet;
+var playerSheet;
 
 function handleFileLoad(event)
 {
@@ -58,35 +64,25 @@ function handleFileLoad(event)
 		});
 		console.log("base sheet loaded")
 	}
-	else if(event.item.id == "body_sheet")
+	else if(event.item.id == "player_sheet")
 	{
-		bodySheet = new createjs.SpriteSheet({
+		playerSheet = new createjs.SpriteSheet({
 			images: [event.result], 
-			frames: {width: 17, height: 22, regX: 0, regY: 0}, 
+			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
 			animations: {
 				idle: [0, 0],
 				jump: [0, 3, "idle", 0.1]
 			}
 		});
-		console.log("body sheet loaded")
-	}
-	else if(event.item.id == "head_sheet")
-	{
-		headSheet = new createjs.SpriteSheet({
-			images: [event.result], 
-			frames: {width: 17, height: 22, regX: 0, regY: 0}, 
-			animations: {
-				idle: [0, 0],
-				jump: [0, 3, "idle", 0.1]
-			}
-		});
-		console.log("body sheet loaded")
+		console.log("player sheet loaded")
 	}
 }
 
 var players = [];
 
 var tiles = [...Array(xSize).keys()].map(i => Array(ySize));
+
+var objects = [...Array(xSize).keys()].map(i => Array(ySize));
 
 //2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
 
@@ -97,9 +93,9 @@ function generateBiteInMap(y, dir, xsize, yize)
 		var x = 0
 
 		for(j=x; j<=x+xsize; j++)
-			tiles[j][y].gotoAndStop(19);
+			tiles[j][y].gotoAndStop(27);
 
-		tiles[x][y].gotoAndStop(14);
+		tiles[x][y].gotoAndStop(31);
 
 		for(i=y+1; i<y+yize; i++)
 		{
@@ -116,7 +112,7 @@ function generateBiteInMap(y, dir, xsize, yize)
 
 		tiles[x][y+yize].gotoAndStop(8);
 
-		tiles[x+xsize][y].gotoAndStop(5);		
+		tiles[x+xsize][y].gotoAndStop(29);		
 		tiles[x+xsize][y+yize].gotoAndStop(2);		
 	}
 	else if(dir == 2)
@@ -124,9 +120,9 @@ function generateBiteInMap(y, dir, xsize, yize)
 		var x = xSize-1
 
 		for(j=x; j>=x-xsize; j--)
-			tiles[j][y].gotoAndStop(19);
+			tiles[j][y].gotoAndStop(27);
 
-		tiles[x][y].gotoAndStop(15);
+		tiles[x][y].gotoAndStop(30);
 
 		for(i=y+1; i<y+yize; i++)
 		{
@@ -143,9 +139,21 @@ function generateBiteInMap(y, dir, xsize, yize)
 
 		tiles[x][y+yize].gotoAndStop(12);
 
-		tiles[x-xsize][y].gotoAndStop(9);		
+		tiles[x-xsize][y].gotoAndStop(28);		
 		tiles[x-xsize][y+yize].gotoAndStop(3);
 	}
+}
+
+function placeObject(id, x, y)
+{
+	objects[x][y] = new createjs.Sprite(levelBaseSheet);
+
+	objects[x][y].gotoAndStop(id);
+
+	objects[x][y].x = x*32;
+	objects[x][y].y = y*32;
+
+	stage.addChild(objects[x][y]);
 }
 
 function handleComplete()
@@ -178,8 +186,8 @@ function handleComplete()
 			else
 				tiles[x][y].gotoAndStop(1);
 
-			tiles[x][y].x = x*32
-			tiles[x][y].y = y*32
+			tiles[x][y].x = x*32;
+			tiles[x][y].y = y*32;
 
 			stage.addChild(tiles[x][y]);
 		}
@@ -216,15 +224,11 @@ function handleComplete()
 	//stage.addChild(circle4);
 	players[0] = []
 	
-	players[0][0] = new createjs.Sprite(bodySheet, "idle");
+	players[0][0] = new createjs.Sprite(playerSheet, "idle");
 	stage.addChild(players[0][0]);
 	players[0][0].x = 100
 	players[0][0].y = 100
 
-	players[0][1] = new createjs.Sprite(headSheet, "idle");
-	stage.addChild(players[0][1]);
-	players[0][1].x = 100
-	players[0][1].y = 100
 
 	generateBiteInMap(2, 1, 2, 4);
 	generateBiteInMap(8, 1, 3, 5);
@@ -233,6 +237,12 @@ function handleComplete()
 	generateBiteInMap(3, 2, 1, 3);
 	generateBiteInMap(8, 2, 2, 1);
 	generateBiteInMap(12, 2, 1, 4);
+
+	placeObject(26, 4, 3);
+	placeObject(24, 6, 3);
+
+	placeObject(24, 6, 9);
+	placeObject(26, 11, 15);
 
 	createjs.Ticker.framerate = 60;
 	createjs.Ticker.on("tick", render);
@@ -251,5 +261,4 @@ setInterval(
 	{
 		$(".fpsCounter").html(FPS + " FPS")
 		players[0][0].gotoAndPlay("jump");
-		players[0][1].gotoAndPlay("jump");
 	}, 1000)
