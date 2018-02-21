@@ -1,4 +1,4 @@
-var socket = io("http://localhost:8080");
+var socket = io("http://127.0.0.1:8080");
 
 socket.on("roomList", 
 		function(data){
@@ -27,31 +27,54 @@ $("#rooms").on("click", "a.joinRoom",
 // 65 (A) - 37 (ARROW_LEFT)
 // 68 (D) - 39 (ARROW_RIGHT)
 
+var keyDown = 0
+
+$("body").keyup(
+	function (event){
+		var key = event.which;
+
+		if(keyDown == key)
+		{
+			keyDown = 0
+			event.preventDefault();
+		}
+	});
+
 $("body").keydown(
 	function (event){
 		var key = event.which;
 
-		if(key == 87 || key ==  38)
+		if(keyDown == 0)
 		{
-			socket.emit("moveCharacter", {x: 0, y: -1}) //"up")
-			event.preventDefault()
+			console.log("key event: " + key)
+			keyDown = key
+
+			if(key == 87 || key ==  38)
+			{
+				socket.emit("moveCharacter", {x: 0, y: -1}); //"up")
+				event.preventDefault();
+			}
+			else if(key == 83 || key ==  40)
+			{
+				socket.emit("moveCharacter", {x: 0, y: 1}); //"down")
+				event.preventDefault();
+			}
+			else if(key == 65 || key ==  37)
+			{
+				socket.emit("moveCharacter", {x: -1, y: 0}); //"left")
+				event.preventDefault();
+			}
+			else if(key == 68 || key ==  39)
+			{
+				socket.emit("moveCharacter", {x: 1, y: 0}); //"right")
+				event.preventDefault();
+			}
 		}
-		else if(key == 83 || key ==  40)
+		else
 		{
-			socket.emit("moveCharacter", {x: 0, y: 1}) //"down")
-			event.preventDefault()
+			event.preventDefault();
 		}
-		else if(key == 65 || key ==  37)
-		{
-			socket.emit("moveCharacter", {x: -1, y: 0}) //"left")
-			event.preventDefault()
-		}
-		else if(key == 68 || key ==  39)
-		{
-			socket.emit("moveCharacter", {x: 1, y: 0}) //"right")
-			event.preventDefault()
-		}
-});
+	});
 
 var stage;
 var queue;
@@ -259,21 +282,47 @@ function placeObject(id, x, y)
 
 var playersNum = 0;
 
-function createPlayer(id, x, y, socket)
+function createPlayer(id, x, y, socket, name, color)
 {
 	players[id] = []
 	
 	players[id][0] = new createjs.Sprite(playerSheet, "idle");
-	stage.addChild(players[id][0]);
 	
-	var w = playerSheet.getFrameBounds(0).width
-	var h = playerSheet.getFrameBounds(0).height
 	
-	players[id][0].x = Math.floor(x*32 + 16 - w/2)
-	players[id][0].y = Math.floor(y*32 + 16 - h/2)-8
+	var w = playerSheet.getFrameBounds(0).width;
+	var h = playerSheet.getFrameBounds(0).height;
+	
+	players[id][0].regX = Math.floor(w/2);
+
+	players[id][0].x = Math.floor(x*32 + 16);
+	players[id][0].y = Math.floor(y*32 + 16 - h/2)-8;
 	//players[id][0].addEventListener("animationend", playerAnimationEnd)
 
+	console.log("create player " + name)
+
+
+	players[id][2] = new createjs.Text(name, "12px sans-serif", color);
+
+	players[id][2].x = players[id][0].x;
+	players[id][2].y = players[id][0].y-20;
+	players[id][2].textAlign = "center";
+		
+	var text = Math.floor(players[id][2].getBounds().width/2)
+
+	players[id][1] = new createjs.Shape();
+	
+	players[id][1].graphics.beginFill("rgba(0,0,0,0.65)").drawRect(0, 0, text*2+8, players[id][2].getBounds().height+2);
+
+	players[id][1].x = players[id][0].x - text - 4;
+	players[id][1].y = players[id][2].y + 1;
+
+	players[id][3] = text
+
 	playersBySocket[socket] = id
+
+	stage.addChild(players[id][0]);
+	stage.addChild(players[id][1]);
+	stage.addChild(players[id][2]);
 }
 
 var jumpDatas = []
@@ -338,11 +387,20 @@ function resetTiles(add)
 	}
 	
 	
+	tiles[1][1].gotoAndStop(32);
+	tiles[1][19].gotoAndStop(33);
+	tiles[19][19].gotoAndStop(34);
+	tiles[19][1].gotoAndStop(35);
+
 	createdObjects = []
 	objects = [...Array(xSize).keys()].map(i => Array(ySize))
 
 	for(var i=0; i<playersNum; i++)
-		stage.removeChild(players[i][0])
+	{
+		stage.removeChild(players[i][0]);
+		stage.removeChild(players[i][1]);
+		stage.removeChild(players[i][2]);
+	}
 
 	players = []
 	playersNum = 0
@@ -355,7 +413,7 @@ function handleComplete()
 	resetTiles(true);
 
 	
-	/*createPlayer(0, 1, 1);
+	/*
 	playersNum = 1;
 
 	generateBiteInMap(2, 1, 2, 4);
@@ -404,7 +462,7 @@ socket.on("sendRoomStructure",
 			if(data.players[i])
 			{
 
-				createPlayer(playersNum, data.players[i].x, data.players[i].y, data.players[i].soc);
+				createPlayer(playersNum, data.players[i].x, data.players[i].y, data.players[i].soc, data.players[i].name, data.players[i].color);
 				playersNum ++;
 			}
 		}
@@ -421,10 +479,22 @@ socket.on("moveCharacter",
 			}
 		*/
 
-		players[playersBySocket[data.soc]][0].x = data.x*32;
-		players[playersBySocket[data.soc]][0].y = data.y*32-18
+		var id = playersBySocket[data.soc];
 
-		jumpPlayer(playersBySocket[data.soc], data.direction.x, data.direction.y);
+		if(data.direction.x == -1)
+			players[id][0].scaleX = -1;
+		else if(data.direction.x == 1)
+			players[id][0].scaleX = 1;
+
+		players[id][0].x = data.x*32+16;
+		players[id][0].y = data.y*32-8;
+
+		players[id][2].x = players[id][0].x;
+		players[id][2].y = players[id][0].y-20;
+		players[id][1].x = players[id][0].x - players[id][3] - 4;
+		players[id][1].y = players[id][2].y + 1;
+
+		jumpPlayer(id, data.direction.x, data.direction.y);
 	});
 
 var FPS = 0;
@@ -476,7 +546,7 @@ function render(event) {
 				players[id][0].x = jumpDatas[id][0]+jumpDatas[id][2]*32;
 				players[id][0].y = jumpDatas[id][1]+jumpDatas[id][3]*32;
 				
-				jumpDatas[id] = false;
+				jumpDatas[id] = null;
 			}
 			else if(progress > 1)
 			{
@@ -487,7 +557,7 @@ function render(event) {
 				var xv = jumpDatas[id][2]/2;
 				var yv = jumpDatas[id][3]/2;
 				
-				var xP = -Math.abs(yv*0.5);
+				var xP = Math.abs(yv*0.5)*players[id][0].scaleX;
 				var yP = -Math.abs(xv*0.5);
 				
 				players[id][0].x = jumpDatas[id][0]+xv*32+xP*32;
@@ -505,7 +575,7 @@ function render(event) {
 				var xv = jumpDatas[id][2]/2;
 				var yv = jumpDatas[id][3]/2;
 				
-				var xP = -Math.abs(yv*0.5);
+				var xP = Math.abs(yv*0.5)*players[id][0].scaleX;
 				var yP = -Math.abs(xv*0.5);
 				
 				players[id][0].x = jumpDatas[id][0];
@@ -519,6 +589,11 @@ function render(event) {
 			
 			players[id][0].x = Math.floor(players[id][0].x)
 			players[id][0].y = Math.floor(players[id][0].y)
+
+			players[id][2].x = players[id][0].x;
+			players[id][2].y = players[id][0].y-20;
+			players[id][1].x = players[id][0].x - players[id][3] - 4;
+			players[id][1].y = players[id][2].y + 1;
 		}
 	}
 	
@@ -536,7 +611,7 @@ setInterval(
 		});
 
 		
-	}, 1500)
+	}, 150)
 	
 
 /*setInterval(

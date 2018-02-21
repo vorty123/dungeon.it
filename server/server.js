@@ -1,4 +1,4 @@
-var app = require("express")();
+/*var app = require("express")();
 var http = require("http").Server(app);
 
 app.get("/", function(req, res){
@@ -8,10 +8,13 @@ app.get("/", function(req, res){
 var port = 8080
 
 http.listen(port, function(){
-	console.log("listening on *:" + port);
-});
+	console.log("listening on :" + port);
+});*/
 
-var io = require("socket.io")(http);
+//var io = require("socket.io")(http);
+
+var io = require('socket.io').listen(8080);
+
 
 var clients = 0
 
@@ -36,6 +39,7 @@ function randomBetween(min, max)
 	return Math.floor((Math.random() * (max-min+1)) + min);
 }
 
+//TODO: rewrite bite generator
 function generateBites(room)
 {
 	var roomCollisions = [...Array(21).keys()].map(i => Array(21))
@@ -51,10 +55,15 @@ function generateBites(room)
 	
 	var num = randomBetween(1,3);
 	
+	console.log("num: " + num);
+
 	for(var i=0; i<num; i++)
 	{
-		var sY = randomBetween(currY, num*16/num);
-		var ySize = randomBetween(2, 5);
+		var yMin = Math.min(2, currY+(num-1)*(14/num))
+		var yMax = Math.max(18, currY+(num)*(14/num))
+
+		var sY = randomBetween(yMin, yMax);
+		var ySize = randomBetween(2, 4);
 		
 		var x = 0;
 		var xsize = randomBetween(1, 4);
@@ -67,7 +76,7 @@ function generateBites(room)
 			}
 		}
 
-		if(sY + ySize >= 20)
+		if(sY + ySize >= 18)
 		{
 			break;
 		}
@@ -81,24 +90,22 @@ function generateBites(room)
 		
 		roomStructures[room].bites.push(bite)
 		
-		currY = sY+ySize+1
-		
 		console.log("generate bite: dir1, " + sY + ", " + ySize)
-		
-		if(currY > 20)
-		{
-			break;
-		}
 	}
 	
 	var currY = 2;
 	
 	var num = randomBetween(1,3);
+
+	console.log("num: " + num);
 	
 	for(var i=0; i<num; i++)
 	{
-		var sY = randomBetween(currY, num*16/num);
-		var ySize = randomBetween(2, 5);
+		var yMin = Math.min(2, currY+(num-1)*(14/num))
+		var yMax = Math.max(18, currY+(num)*(14/num))
+
+		var sY = randomBetween(yMin, yMax);
+		var ySize = randomBetween(2, 4);
 		
 		var x = 21-1;
 		var xsize = randomBetween(1, 4);
@@ -125,14 +132,7 @@ function generateBites(room)
 		
 		roomStructures[room].bites.push(bite)
 		
-		currY = sY+ySize+1
-		
 		console.log("generate bite: dir2, " + sY + ", " + ySize)
-		
-		if(currY > 20)
-		{
-			break;
-		}
 	}
 	
 	var obj = {
@@ -311,6 +311,8 @@ io.on("connection", function(socket){
 
 				currentSpawnPoint = getRandomSpawnPoint(room);
 
+				var color = "mediumseagreen"
+
 				var x = 1;
 				var y = 1;
 
@@ -318,23 +320,28 @@ io.on("connection", function(socket){
 				{
 					case 1:
 						x = 1;
-						y = 19
+						y = 19;
+						color = "darkcyan";
 					break;
 
 					case 2:
 						x = 19;
-						y = 19
+						y = 19;
+						color = "indianred";
 					break;
 
 					case 3:
 						x = 19;
-						y = 1
+						y = 1;
+						color = "gold";
 					break;
 				}
 
 				playerDatas[socket.id] = {
 					x: x,
 					y: y,
+					color: color,
+					name: "name",
 					soc: socket.id,
 					nextMove: 0,
 				}
@@ -372,7 +379,7 @@ io.on("connection", function(socket){
 			}
 		});
 
-	
+
 	socket.on('latency', function (startTime, cb) {
 		cb(startTime);
 	}); 
