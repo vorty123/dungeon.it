@@ -1,7 +1,8 @@
-var socket = io('http://localhost:8080');
+var socket = io("http://localhost:8080");
 
-socket.on('roomList', 
+socket.on("roomList", 
 		function(data){
+			$("#rooms").show()
 			$("#rooms").html("")
 			
 			for(var room in data)
@@ -19,6 +20,38 @@ $("#rooms").on("click", "a.joinRoom",
 		socket.emit("joinRoom", $(this).attr("id"))
 		event.preventDefault();
 	});
+
+
+// 87 (W) - 38 (ARROW_UP)
+// 83 (S) - 40 (ARROW_DOWN)
+// 65 (A) - 37 (ARROW_LEFT)
+// 68 (D) - 39 (ARROW_RIGHT)
+
+$("body").keydown(
+	function (event){
+		var key = event.which;
+
+		if(key == 87 || key ==  38)
+		{
+			socket.emit("moveCharacter", {x: 0, y: -1}) //"up")
+			event.preventDefault()
+		}
+		else if(key == 83 || key ==  40)
+		{
+			socket.emit("moveCharacter", {x: 0, y: 1}) //"down")
+			event.preventDefault()
+		}
+		else if(key == 65 || key ==  37)
+		{
+			socket.emit("moveCharacter", {x: -1, y: 0}) //"left")
+			event.preventDefault()
+		}
+		else if(key == 68 || key ==  39)
+		{
+			socket.emit("moveCharacter", {x: 1, y: 0}) //"right")
+			event.preventDefault()
+		}
+});
 
 var stage;
 var queue;
@@ -44,7 +77,7 @@ function init()
 	stage.canvas.width = xSize*32
 	stage.canvas.height = ySize*32
 
-	window.addEventListener('resize', resizeCanvas, false);
+	window.addEventListener("resize", resizeCanvas, false);
 	resizeCanvas()
 
 	queue = new createjs.LoadQueue(true);
@@ -108,6 +141,7 @@ function handleFileLoad(event)
 }
 
 var players = [];
+var playersBySocket = [];
 
 var tiles = [...Array(xSize).keys()].map(i => Array(ySize));
 var objects = [...Array(xSize).keys()].map(i => Array(ySize));
@@ -223,9 +257,9 @@ function placeObject(id, x, y)
 	objects[x][y][4] = objects[x][y][0].y;
 }
 
-var playersNum = 1;
+var playersNum = 0;
 
-function createPlayer(id, x, y)
+function createPlayer(id, x, y, socket)
 {
 	players[id] = []
 	
@@ -236,9 +270,10 @@ function createPlayer(id, x, y)
 	var h = playerSheet.getFrameBounds(0).height
 	
 	players[id][0].x = Math.floor(x*32 + 16 - w/2)
-	players[id][0].y = Math.floor(y*32 + 16 - h/2)-16
+	players[id][0].y = Math.floor(y*32 + 16 - h/2)-8
 	//players[id][0].addEventListener("animationend", playerAnimationEnd)
 
+	playersBySocket[socket] = id
 }
 
 var jumpDatas = []
@@ -265,7 +300,7 @@ function resetTiles(add)
 	{
 		for(y=0; y<ySize; y++)
 		{
-			console.log(x + ", " + y)
+			//console.log(x + ", " + y)
 			
 			if(objects[x][y])
 			{
@@ -305,6 +340,12 @@ function resetTiles(add)
 	
 	createdObjects = []
 	objects = [...Array(xSize).keys()].map(i => Array(ySize))
+
+	for(var i=0; i<playersNum; i++)
+		stage.removeChild(players[i][0])
+
+	players = []
+	playersNum = 0
 }
 
 function handleComplete()
@@ -314,7 +355,7 @@ function handleComplete()
 	resetTiles(true);
 
 	
-	createPlayer(0, 1, 1);
+	/*createPlayer(0, 1, 1);
 	playersNum = 1;
 
 	generateBiteInMap(2, 1, 2, 4);
@@ -331,27 +372,59 @@ function handleComplete()
 	placeObject(24, 6, 9);//chest
 	placeObject("hourglass", 11, 10);
 	placeObject("cannonball", 11, 7);
-	placeObject("snowflake", 11, 5);
+	placeObject("snowflake", 11, 5);*/
 	
 
 	createjs.Ticker.framerate = 60;
 	createjs.Ticker.on("tick", render);
 }
 
-socket.on('sendRoomStructure', 
+socket.on("sendRoomStructure", 
 	function(data){
+		$("#rooms").hide();
+
 		resetTiles();
 		
+		//struct: roomStructures[room], mySpawn: currentSpawnPoint, players: rooms[room].spawnPoints
+
+		var structure = data.struct;
 		
-		for(var i in data.bites)
+		for(var i in structure.bites)
 		{
-			generateBiteInMap(data.bites[i].y, data.bites[i].dir, data.bites[i].xsize, data.bites[i].ysize)
+			generateBiteInMap(structure.bites[i].y, structure.bites[i].dir, structure.bites[i].xsize, structure.bites[i].ysize)
 		}
 		
-		for(var i in data.objects)
+		for(var i in structure.objects)
 		{
-			placeObject(data.objects[i].id, data.objects[i].x, data.objects[i].y)
+			placeObject(structure.objects[i].id, structure.objects[i].x, structure.objects[i].y)
 		}
+
+		for(var i=0; i<4; i++)
+		{
+			if(data.players[i])
+			{
+
+				createPlayer(playersNum, data.players[i].x, data.players[i].y, data.players[i].soc);
+				playersNum ++;
+			}
+		}
+	});
+
+socket.on("moveCharacter", 
+	function(data){
+		/*
+			var movementDatas = {
+				soc: socket.id,
+				x: playerDatas[socket.id].x,
+				y: playerDatas[socket.id].y,
+				direction: direction
+			}
+		*/
+
+		players[playersBySocket[data.soc]][0].x = data.x*32;
+		players[playersBySocket[data.soc]][0].y = data.y*32-18
+
+		jumpPlayer(playersBySocket[data.soc], data.direction.x, data.direction.y);
 	});
 
 var FPS = 0;
@@ -409,7 +482,7 @@ function render(event) {
 			{
 				progress = progress-1;
 				
-				console.log("p2 " + progress);
+				//console.log("p2 " + progress);
 				
 				var xv = jumpDatas[id][2]/2;
 				var yv = jumpDatas[id][3]/2;
@@ -427,7 +500,7 @@ function render(event) {
 			}
 			else
 			{
-				console.log("p1 " + progress);
+				//console.log("p1 " + progress);
 				
 				var xv = jumpDatas[id][2]/2;
 				var yv = jumpDatas[id][3]/2;
@@ -456,11 +529,18 @@ setInterval(
 	function()
 	{
 		$(".fpsCounter").html(FPS + " FPS")
-	}, 1000)
+
+		socket.emit('latency', Date.now(), function(startTime) {
+			var latency = Date.now() - startTime;
+			$(".pingCounter").html(latency + " ms")
+		});
+
+		
+	}, 1500)
 	
 
-setInterval(
+/*setInterval(
 	function()
 	{
 		jumpPlayer(0, 1, 0)
-	}, 500)
+	}, 500)*/
