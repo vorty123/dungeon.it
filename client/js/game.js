@@ -1,23 +1,57 @@
-var socket = io('http://localhost:3030');
+var socket = io("http://localhost:8080");
 
-socket.on('roomList', 
+socket.on("roomList", 
 		function(data){
+			$("#rooms").show()
 			$("#rooms").html("")
 			
 			for(var room in data)
 			{
 				//console.log(data[room])
 				$("#rooms").append(room + " " + data[room].currentPlayers + "/" + data[room].neededPlayers + " ");
-				$("<a class='joinRoom' id='" + data[room].name + "' href='#'>Belépés</a>").appendTo("#rooms");
+				$("<a class='joinRoom' id='" + room + "' href='#'>Belépés</a>").appendTo("#rooms");
 			}
 		}
 	);
+	
 
 $("#rooms").on("click", "a.joinRoom",
-	function (){
-		console.log("join c")
+	function (event){
 		socket.emit("joinRoom", $(this).attr("id"))
+		event.preventDefault();
 	});
+
+
+// 87 (W) - 38 (ARROW_UP)
+// 83 (S) - 40 (ARROW_DOWN)
+// 65 (A) - 37 (ARROW_LEFT)
+// 68 (D) - 39 (ARROW_RIGHT)
+
+$("body").keydown(
+	function (event){
+		var key = event.which;
+
+		if(key == 87 || key ==  38)
+		{
+			socket.emit("moveCharacter", {x: 0, y: -1}) //"up")
+			event.preventDefault()
+		}
+		else if(key == 83 || key ==  40)
+		{
+			socket.emit("moveCharacter", {x: 0, y: 1}) //"down")
+			event.preventDefault()
+		}
+		else if(key == 65 || key ==  37)
+		{
+			socket.emit("moveCharacter", {x: -1, y: 0}) //"left")
+			event.preventDefault()
+		}
+		else if(key == 68 || key ==  39)
+		{
+			socket.emit("moveCharacter", {x: 1, y: 0}) //"right")
+			event.preventDefault()
+		}
+});
 
 var stage;
 var queue;
@@ -25,27 +59,44 @@ var queue;
 var xSize = 21
 var ySize = 21
 
+function resizeCanvas()
+{
+	var h = Math.min(window.innerHeight, window.innerWidth);
+	
+	h = Math.floor(h/16)*16
+	
+	$("#mainCanvas").attr("style", "height: " + h + "px;")
+}
+
+var bitmaps = []
+
 function init()
 {
 	stage = new createjs.Stage("mainCanvas");
 
 	stage.canvas.width = xSize*32
 	stage.canvas.height = ySize*32
-	
+
+	window.addEventListener("resize", resizeCanvas, false);
+	resizeCanvas()
+
 	queue = new createjs.LoadQueue(true);
 	queue.on("complete", handleComplete, this);
 	queue.on("fileload", handleFileLoad, this);
 
 	queue.loadFile({id:"levelbase", src:"img/levelbase.png"});
-	queue.loadFile({id:"body_sheet", src:"img/body_sheet.png"});
-	queue.loadFile({id:"head_sheet", src:"img/head_sheet.png"});
+	queue.loadFile({id:"player_sheet", src:"img/player_sheet.png"});
+	queue.loadFile({id:"hourglass_sheet", src:"img/hourglass_sheet.png"});
+	
+	queue.loadFile({id:"bitmap:cannonball", src:"img/cannonball.png"});
+	queue.loadFile({id:"bitmap:snowflake", src:"img/snowflake.png"});
 
 	queue.load();
 }
 
 var levelBaseSheet;
-var bodySheet;
-var headSheet;
+var playerSheet;
+var hourglassSheet;
 
 function handleFileLoad(event)
 {
@@ -58,35 +109,42 @@ function handleFileLoad(event)
 		});
 		console.log("base sheet loaded")
 	}
-	else if(event.item.id == "body_sheet")
+	else if(event.item.id == "player_sheet")
 	{
-		bodySheet = new createjs.SpriteSheet({
+		playerSheet = new createjs.SpriteSheet({
 			images: [event.result], 
-			frames: {width: 17, height: 22, regX: 0, regY: 0}, 
+			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
 			animations: {
 				idle: [0, 0],
-				jump: [0, 3, "idle", 0.1]
+				jump1: [0, 1, "jump2", 0.1],
+				jump2: [2, 3, "idle", 0.1],
 			}
 		});
-		console.log("body sheet loaded")
+		console.log("player sheet loaded")
 	}
-	else if(event.item.id == "head_sheet")
+	else if(event.item.id == "hourglass_sheet")
 	{
-		headSheet = new createjs.SpriteSheet({
+		hourglassSheet = new createjs.SpriteSheet({
 			images: [event.result], 
-			frames: {width: 17, height: 22, regX: 0, regY: 0}, 
+			frames: {width: 14, height: 13, regX: 0, regY: 0}, 
 			animations: {
-				idle: [0, 0],
-				jump: [0, 3, "idle", 0.1]
+				idle: [0, 14, "idle", 0.35],
 			}
 		});
-		console.log("body sheet loaded")
+		console.log("hourglass sheet loaded")
+	}
+	else if(event.item.id.indexOf("bitmap:") == 0)
+	{
+		bitmaps[event.item.id.substr(7)] = event.result;
+		console.log("bitmap loaded: " + event.item.id.substr(7))
 	}
 }
 
 var players = [];
+var playersBySocket = [];
 
 var tiles = [...Array(xSize).keys()].map(i => Array(ySize));
+var objects = [...Array(xSize).keys()].map(i => Array(ySize));
 
 //2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
 
@@ -97,9 +155,9 @@ function generateBiteInMap(y, dir, xsize, yize)
 		var x = 0
 
 		for(j=x; j<=x+xsize; j++)
-			tiles[j][y].gotoAndStop(19);
+			tiles[j][y].gotoAndStop(27);
 
-		tiles[x][y].gotoAndStop(14);
+		tiles[x][y].gotoAndStop(31);
 
 		for(i=y+1; i<y+yize; i++)
 		{
@@ -116,7 +174,7 @@ function generateBiteInMap(y, dir, xsize, yize)
 
 		tiles[x][y+yize].gotoAndStop(8);
 
-		tiles[x+xsize][y].gotoAndStop(5);		
+		tiles[x+xsize][y].gotoAndStop(29);		
 		tiles[x+xsize][y+yize].gotoAndStop(2);		
 	}
 	else if(dir == 2)
@@ -124,9 +182,9 @@ function generateBiteInMap(y, dir, xsize, yize)
 		var x = xSize-1
 
 		for(j=x; j>=x-xsize; j--)
-			tiles[j][y].gotoAndStop(19);
+			tiles[j][y].gotoAndStop(27);
 
-		tiles[x][y].gotoAndStop(15);
+		tiles[x][y].gotoAndStop(30);
 
 		for(i=y+1; i<y+yize; i++)
 		{
@@ -143,21 +201,114 @@ function generateBiteInMap(y, dir, xsize, yize)
 
 		tiles[x][y+yize].gotoAndStop(12);
 
-		tiles[x-xsize][y].gotoAndStop(9);		
+		tiles[x-xsize][y].gotoAndStop(28);		
 		tiles[x-xsize][y+yize].gotoAndStop(3);
 	}
 }
 
-function handleComplete()
-{
-	console.log("loaded");
+var createdObjects = []
 
+function placeObject(id, x, y)
+{
+	objects[x][y] = [];
+	
+	createdObjects.push({x: x, y: y});
+	
+	if(bitmaps[id])
+	{
+		objects[x][y][0] = new createjs.Bitmap(bitmaps[id]);
+		
+		var w = objects[x][y][0].getBounds().width
+		var h = objects[x][y][0].getBounds().height
+		
+		objects[x][y][0].x = Math.floor(x*32 + 16 - w/2);
+		objects[x][y][0].y = Math.floor(y*32 + 16 - h/2);
+
+		stage.addChild(objects[x][y][0]);
+	}	
+	else if(id == "hourglass")
+	{
+		objects[x][y][0]= new createjs.Sprite(hourglassSheet, "idle");
+
+		var w = hourglassSheet.getFrameBounds(0).width
+		var h = hourglassSheet.getFrameBounds(0).height
+		
+		objects[x][y][0].x = Math.floor(x*32 + 16 - w/2);
+		objects[x][y][0].y = Math.floor(y*32 + 16 - h/2);;
+
+		stage.addChild(objects[x][y][0]);
+	}
+	else
+	{
+		objects[x][y][0] = new createjs.Sprite(levelBaseSheet);
+
+		objects[x][y][0].gotoAndStop(id);
+
+		objects[x][y][0].x = x*32;
+		objects[x][y][0].y = y*32;
+
+		stage.addChild(objects[x][y][0]);	
+	}
+	
+	objects[x][y][1] = id;
+	objects[x][y][2] = 0;
+	
+	objects[x][y][3] = objects[x][y][0].x;
+	objects[x][y][4] = objects[x][y][0].y;
+}
+
+var playersNum = 0;
+
+function createPlayer(id, x, y, socket)
+{
+	players[id] = []
+	
+	players[id][0] = new createjs.Sprite(playerSheet, "idle");
+	stage.addChild(players[id][0]);
+	
+	var w = playerSheet.getFrameBounds(0).width
+	var h = playerSheet.getFrameBounds(0).height
+	
+	players[id][0].x = Math.floor(x*32 + 16 - w/2)
+	players[id][0].y = Math.floor(y*32 + 16 - h/2)-8
+	//players[id][0].addEventListener("animationend", playerAnimationEnd)
+
+	playersBySocket[socket] = id
+}
+
+var jumpDatas = []
+
+/*function playerAnimationEnd(event)
+{
+	if(event.name == "jump1")
+	{
+		event.currentTarget.x += jumpDatas[event.currentTarget.id][0]*32
+		event.currentTarget.y += jumpDatas[event.currentTarget.id][1]*32
+	}
+}*/
+
+function jumpPlayer(id, x, y)
+{	
+	players[id][0].gotoAndPlay("jump1");
+	
+	jumpDatas[id] = [players[id][0].x, players[id][0].y, x, y, 0]
+}
+
+function resetTiles(add)
+{
 	for(x=0; x<xSize; x++)
 	{
 		for(y=0; y<ySize; y++)
 		{
 			//console.log(x + ", " + y)
-			tiles[x][y] = new createjs.Sprite(levelBaseSheet);
+			
+			if(objects[x][y])
+			{
+				stage.removeChild(objects[x][y][0])
+			}
+			
+			if(add)
+				tiles[x][y] = new createjs.Sprite(levelBaseSheet);
 
 			if(x == xSize-1 && y == ySize-1)
 				tiles[x][y].gotoAndStop(20);
@@ -178,53 +329,34 @@ function handleComplete()
 			else
 				tiles[x][y].gotoAndStop(1);
 
-			tiles[x][y].x = x*32
-			tiles[x][y].y = y*32
-
-			stage.addChild(tiles[x][y]);
+			tiles[x][y].x = x*32;
+			tiles[x][y].y = y*32;
+	
+			if(add)
+				stage.addChild(tiles[x][y]);
 		}
 	}
-
-	//circle = new createjs.Shape();
-	//circle.graphics.beginFill("red").drawCircle(16, 16, 16);
-	//circle.x = 1*32
-	//circle.y = 1*32
-	//stage.addChild(circle);
-//
-	//circle2 = new createjs.Shape();
-	//circle2.graphics.beginFill("green").drawCircle(16, 16, 16);
-	//circle2.x = (xSize-2)*32
-	//circle2.y = 1*32
-	//stage.addChild(circle2);
-//
-	//circle3 = new createjs.Shape();
-	//circle3.graphics.beginFill("blue").drawCircle(16, 16, 16);
-	//circle3.x = 1*32
-	//circle3.y = (ySize-2)*32
-	//stage.addChild(circle3);
-//
-	//circle4 = new createjs.Shape();
-	//circle4.graphics.beginFill("purple").drawCircle(16, 16, 16);
-	//circle4.x = (xSize-2)*32
-	//circle4.y = (ySize-2)*32
-	//stage.addChild(circle4);
-//
-	//circle4 = new createjs.Shape();
-	//circle4.graphics.beginFill("gold").drawCircle(16, 16, 16);
-	//circle4.x = (xSize-1)/2*32
-	//circle4.y = (ySize-1)/2*32
-	//stage.addChild(circle4);
-	players[0] = []
 	
-	players[0][0] = new createjs.Sprite(bodySheet, "idle");
-	stage.addChild(players[0][0]);
-	players[0][0].x = 100
-	players[0][0].y = 100
+	
+	createdObjects = []
+	objects = [...Array(xSize).keys()].map(i => Array(ySize))
 
-	players[0][1] = new createjs.Sprite(headSheet, "idle");
-	stage.addChild(players[0][1]);
-	players[0][1].x = 100
-	players[0][1].y = 100
+	for(var i=0; i<playersNum; i++)
+		stage.removeChild(players[i][0])
+
+	players = []
+	playersNum = 0
+}
+
+function handleComplete()
+{
+	console.log("loaded");
+
+	resetTiles(true);
+
+	
+	/*createPlayer(0, 1, 1);
+	playersNum = 1;
 
 	generateBiteInMap(2, 1, 2, 4);
 	generateBiteInMap(8, 1, 3, 5);
@@ -234,14 +366,161 @@ function handleComplete()
 	generateBiteInMap(8, 2, 2, 1);
 	generateBiteInMap(12, 2, 1, 4);
 
+	placeObject(26, 6, 3);
+	placeObject(26, 11, 15);
+	
+	placeObject(24, 6, 9);//chest
+	placeObject("hourglass", 11, 10);
+	placeObject("cannonball", 11, 7);
+	placeObject("snowflake", 11, 5);*/
+	
+
 	createjs.Ticker.framerate = 60;
 	createjs.Ticker.on("tick", render);
 }
+
+socket.on("sendRoomStructure", 
+	function(data){
+		$("#rooms").hide();
+
+		resetTiles();
+		
+		//struct: roomStructures[room], mySpawn: currentSpawnPoint, players: rooms[room].spawnPoints
+
+		var structure = data.struct;
+		
+		for(var i in structure.bites)
+		{
+			generateBiteInMap(structure.bites[i].y, structure.bites[i].dir, structure.bites[i].xsize, structure.bites[i].ysize)
+		}
+		
+		for(var i in structure.objects)
+		{
+			placeObject(structure.objects[i].id, structure.objects[i].x, structure.objects[i].y)
+		}
+
+		for(var i=0; i<4; i++)
+		{
+			if(data.players[i])
+			{
+
+				createPlayer(playersNum, data.players[i].x, data.players[i].y, data.players[i].soc);
+				playersNum ++;
+			}
+		}
+	});
+
+socket.on("moveCharacter", 
+	function(data){
+		/*
+			var movementDatas = {
+				soc: socket.id,
+				x: playerDatas[socket.id].x,
+				y: playerDatas[socket.id].y,
+				direction: direction
+			}
+		*/
+
+		players[playersBySocket[data.soc]][0].x = data.x*32;
+		players[playersBySocket[data.soc]][0].y = data.y*32-18
+
+		jumpPlayer(playersBySocket[data.soc], data.direction.x, data.direction.y);
+	});
 
 var FPS = 0;
 
 function render(event) {
 	FPS = Math.floor(1000/event.delta)
+	
+	for(var i in createdObjects)
+	{
+		var x = createdObjects[i].x;
+		var y = createdObjects[i].y;
+		var obj = objects[x][y];
+		
+		if(obj[1] == "snowflake" || obj[1] == "cannonball" || obj[1] == "hourglass")
+		{
+			objects[x][y][2] += event.delta/500;
+			
+			var progress = objects[x][y][2];
+			
+			if(progress > 2)
+			{
+				objects[x][y][2] = 0;
+				
+				objects[x][y][0].y = objects[x][y][4];
+			}
+			else if(progress > 1)
+			{
+				progress = progress - 1;
+				
+				objects[x][y][0].y = objects[x][y][4]-5+5*EasingFunctions.easeInQuad(progress);
+			}
+			else
+			{
+				objects[x][y][0].y = objects[x][y][4]-5*EasingFunctions.easeOutQuad(progress);
+			}
+		}
+	}
+	
+	for(var id=0; id<playersNum; id++)
+	{
+		if(jumpDatas[id])
+		{
+			jumpDatas[id][4] += event.delta/120;
+			
+			var progress = jumpDatas[id][4];
+			
+			if(progress > 2)
+			{
+				players[id][0].x = jumpDatas[id][0]+jumpDatas[id][2]*32;
+				players[id][0].y = jumpDatas[id][1]+jumpDatas[id][3]*32;
+				
+				jumpDatas[id] = false;
+			}
+			else if(progress > 1)
+			{
+				progress = progress-1;
+				
+				//console.log("p2 " + progress);
+				
+				var xv = jumpDatas[id][2]/2;
+				var yv = jumpDatas[id][3]/2;
+				
+				var xP = -Math.abs(yv*0.5);
+				var yP = -Math.abs(xv*0.5);
+				
+				players[id][0].x = jumpDatas[id][0]+xv*32+xP*32;
+				players[id][0].x += xv*32*progress;
+				players[id][0].x -= xP*32*EasingFunctions.easeInQuint(progress);
+									
+				players[id][0].y = jumpDatas[id][1]+yv*32+yP*32;
+				players[id][0].y += yv*32*progress;
+				players[id][0].y -= yP*32*EasingFunctions.easeInQuint(progress);
+			}
+			else
+			{
+				//console.log("p1 " + progress);
+				
+				var xv = jumpDatas[id][2]/2;
+				var yv = jumpDatas[id][3]/2;
+				
+				var xP = -Math.abs(yv*0.5);
+				var yP = -Math.abs(xv*0.5);
+				
+				players[id][0].x = jumpDatas[id][0];
+				players[id][0].x += xv*32*progress;
+				players[id][0].x += xP*32*EasingFunctions.easeOutQuint(progress);
+									
+				players[id][0].y = jumpDatas[id][1];
+				players[id][0].y += yv*32*progress;
+				players[id][0].y += yP*32*EasingFunctions.easeOutQuint(progress);
+			}
+			
+			players[id][0].x = Math.floor(players[id][0].x)
+			players[id][0].y = Math.floor(players[id][0].y)
+		}
+	}
 	
 	stage.update();
 }
@@ -250,6 +529,18 @@ setInterval(
 	function()
 	{
 		$(".fpsCounter").html(FPS + " FPS")
-		players[0][0].gotoAndPlay("jump");
-		players[0][1].gotoAndPlay("jump");
-	}, 1000)
+
+		socket.emit('latency', Date.now(), function(startTime) {
+			var latency = Date.now() - startTime;
+			$(".pingCounter").html(latency + " ms")
+		});
+
+		
+	}, 1500)
+	
+
+/*setInterval(
+	function()
+	{
+		jumpPlayer(0, 1, 0)
+	}, 500)*/
