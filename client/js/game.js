@@ -47,26 +47,29 @@ $("body").keydown(
 		if(keyDown == 0)
 		{
 			console.log("key event: " + key)
-			keyDown = key
-
+			
 			if(key == 87 || key ==  38)
 			{
 				socket.emit("moveCharacter", {x: 0, y: -1}); //"up")
+				keyDown = key;
 				event.preventDefault();
 			}
 			else if(key == 83 || key ==  40)
 			{
 				socket.emit("moveCharacter", {x: 0, y: 1}); //"down")
+				keyDown = key;
 				event.preventDefault();
 			}
 			else if(key == 65 || key ==  37)
 			{
 				socket.emit("moveCharacter", {x: -1, y: 0}); //"left")
+				keyDown = key;
 				event.preventDefault();
 			}
 			else if(key == 68 || key ==  39)
 			{
 				socket.emit("moveCharacter", {x: 1, y: 0}); //"right")
+				keyDown = key;
 				event.preventDefault();
 			}
 		}
@@ -138,8 +141,8 @@ function handleFileLoad(event)
 			images: [event.result], 
 			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
 			animations: {
-				idle: [0, 0],
-				jump1: [0, 1, "jump2", 0.1],
+				idle: [4, 5, true, 0.05],
+				jump1: [0, 1, false, 0.1],
 				jump2: [2, 3, "idle", 0.1],
 			}
 		});
@@ -553,6 +556,8 @@ function render(event) {
 				progress = progress-1;
 				
 				//console.log("p2 " + progress);
+				if(players[id][0].currentAnimation != "jump2")
+					players[id][0].gotoAndPlay("jump2");
 				
 				var xv = jumpDatas[id][2]/2;
 				var yv = jumpDatas[id][3]/2;
