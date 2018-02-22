@@ -32,6 +32,7 @@ roomStructures["Teszt szoba"] = {
 	bites: [],
 	objects: [],
 	roomCollisions: [],
+	pickables: [],
 }
 
 function randomBetween(min, max)
@@ -42,6 +43,7 @@ function randomBetween(min, max)
 function generateMap(room)
 {
 	var roomCollisions = [...Array(21).keys()].map(i => Array(21))
+	var pickables = [...Array(21).keys()].map(i => Array(21))
 	
 	roomCollisions[1][1] = true;
 	roomCollisions[1][19] = true;
@@ -205,12 +207,15 @@ function generateMap(room)
 				y: y,
 			}
 			
-			roomStructures[room].objects.push(obj);
+			var id = roomStructures[room].objects.push(obj) - 1;
+
 			roomCollisions[x][y] = "pickable";
+			pickables[x][y] = id;
 		}
 	}
 
 	roomStructures[room].roomCollisions = roomCollisions;
+	roomStructures[room].pickables = pickables;
 }
 
 generateMap("Teszt szoba")
@@ -322,6 +327,9 @@ io.on("connection", function(socket){
 	 						roomStructures[currentRoom].roomCollisions[x][y] = null
 	 						console.log("user " + socket.id + " pickup up pickable at " + x + ", " + y + ".")
 	 						io.to(currentRoom).emit("pickUpObject", {x: x, y: y})
+
+	 						roomStructures[currentRoom].objects[roomStructures[currentRoom].pickables[x][y]] = null;
+	 						roomStructures[currentRoom].pickables[x][y] = null;
 	 						
 	 					}
 

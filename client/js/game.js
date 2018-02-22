@@ -482,12 +482,14 @@ socket.on("sendRoomStructure",
 		
 		for(var i in structure.bites)
 		{
-			generateBiteInMap(structure.bites[i].y, structure.bites[i].dir, structure.bites[i].xsize, structure.bites[i].ysize)
+			if(structure.bites[i])
+				generateBiteInMap(structure.bites[i].y, structure.bites[i].dir, structure.bites[i].xsize, structure.bites[i].ysize)
 		}
 		
 		for(var i in structure.objects)
 		{
-			placeObject(structure.objects[i].id, structure.objects[i].x, structure.objects[i].y)
+			if(structure.objects[i])
+				placeObject(structure.objects[i].id, structure.objects[i].x, structure.objects[i].y)
 		}
 
 		for(var i=0; i<4; i++)
@@ -660,7 +662,7 @@ function render(event) {
 				var xv = jumpDatas[id][2]/2;
 				var yv = jumpDatas[id][3]/2;
 				
-				var xP = Math.abs(yv*0.5)*players[id][0].scaleX;
+				var xP = 0//Math.abs(yv*0.5)*players[id][0].scaleX;
 				var yP = -Math.abs(xv*0.5);
 				
 				players[id][0].x = jumpDatas[id][0]+xv*32+xP*32;
@@ -678,7 +680,7 @@ function render(event) {
 				var xv = jumpDatas[id][2]/2;
 				var yv = jumpDatas[id][3]/2;
 				
-				var xP = Math.abs(yv*0.5)*players[id][0].scaleX;
+				var xP = 0//Math.abs(yv*0.5)*players[id][0].scaleX;
 				var yP = -Math.abs(xv*0.5);
 				
 				players[id][0].x = jumpDatas[id][0];
