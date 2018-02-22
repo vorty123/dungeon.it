@@ -39,8 +39,7 @@ function randomBetween(min, max)
 	return Math.floor((Math.random() * (max-min+1)) + min);
 }
 
-//TODO: rewrite bite generator
-function generateBites(room)
+function generateMap(room)
 {
 	var roomCollisions = [...Array(21).keys()].map(i => Array(21))
 	
@@ -49,38 +48,42 @@ function generateBites(room)
 	roomCollisions[19][19] = true;
 	roomCollisions[19][1] = true;
 
-	console.log("generating bite in room: " + room)
+	console.log("generating map of room: " + room)
 	//generateBiteInMap(y, dir, xsize, yize)
-	var currY = 2;
 	
 	var num = randomBetween(1,3);
 	
-	console.log("num: " + num);
+	//console.log("num: " + num);
+
+	var curr = 0;
 
 	for(var i=0; i<num; i++)
 	{
-		var yMin = Math.min(2, currY+(num-1)*(14/num))
-		var yMax = Math.max(18, currY+(num)*(14/num))
-
-		var sY = randomBetween(yMin, yMax);
-		var ySize = randomBetween(2, 4);
+		var oneSize = Math.floor(18/num)
+		var sY = randomBetween(Math.max(2+oneSize*i, curr+1), 1+oneSize*(i+1));
+		var ySize = randomBetween(2, oneSize-1);
 		
+		//console.log("bite " + i +  ": " + oneSize + ", " + (1+oneSize*i) + ", " + (oneSize*(i+1)))
+		//console.log("sy: " + sY + ", " + ySize)
+
 		var x = 0;
-		var xsize = randomBetween(1, 4);
+		var xsize = randomBetween(1, 5);
 
-		for(j=x; j<=x+xsize; j++)
-		{
-			for(i=sY; i<=sY+ySize; i++)
-			{
-				roomCollisions[j][i] = "nomove";
-			}
-		}
-
-		if(sY + ySize >= 18)
+		if((sY + ySize) >= 18)
 		{
 			break;
 		}
+
+		for(j=x; j<=x+xsize; j++)
+		{
+			for(k=sY; k<=sY+ySize; k++)
+			{
+				roomCollisions[j][k] = "nomove";
+			}
+		}
 		
+		curr = sY+ySize
+
 		var bite = {
 			y: sY,
 			dir: 1,
@@ -93,36 +96,37 @@ function generateBites(room)
 		console.log("generate bite: dir1, " + sY + ", " + ySize)
 	}
 	
-	var currY = 2;
-	
 	var num = randomBetween(1,3);
 
-	console.log("num: " + num);
-	
+	var curr = 0;
+
 	for(var i=0; i<num; i++)
 	{
-		var yMin = Math.min(2, currY+(num-1)*(14/num))
-		var yMax = Math.max(18, currY+(num)*(14/num))
-
-		var sY = randomBetween(yMin, yMax);
-		var ySize = randomBetween(2, 4);
+		var oneSize = Math.floor(18/num)
+		var sY = randomBetween(Math.max(2+oneSize*i, curr+1), 1+oneSize*(i+1));
+		var ySize = randomBetween(2, oneSize-1);
 		
+		//console.log("bite " + i +  ": " + oneSize + ", " + (1+oneSize*i) + ", " + (oneSize*(i+1)))
+		//console.log("sy: " + sY + ", " + ySize)
+
 		var x = 21-1;
-		var xsize = randomBetween(1, 4);
+		var xsize = randomBetween(1, 5);
 
-		for(j=x; j>=x-xsize; j--)
-		{
-			for(i=sY; i<=sY+ySize; i++)
-			{
-				roomCollisions[j][i] = "nomove";
-			}
-		}
-
-		if(sY + ySize >= 20)
+		if((sY + ySize) >= 18)
 		{
 			break;
 		}
-		
+
+		for(j=x; j>=x-xsize; j--)
+		{
+			for(k=sY; k<=sY+ySize; k++)
+			{
+				roomCollisions[j][k] = "nomove";
+			}
+		}
+
+		curr = sY+ySize
+
 		var bite = {
 			y: sY,
 			dir: 2,
@@ -209,7 +213,7 @@ function generateBites(room)
 	roomStructures[room].roomCollisions = roomCollisions;
 }
 
-generateBites("Teszt szoba")
+generateMap("Teszt szoba")
 
 io.emit("roomList", rooms)
 
