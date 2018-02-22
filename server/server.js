@@ -298,6 +298,13 @@ io.on("connection", function(socket){
  					playerDatas[socket.id].y = y
  					playerDatas[socket.id].nextMove = getTickCount()+240
 
+ 					if(roomStructures[currentRoom].roomCollisions[x] && roomStructures[currentRoom].roomCollisions[x][y] == "pickable")
+ 					{
+ 						roomStructures[currentRoom].roomCollisions[x][y] = null
+ 						console.log("user " + socket.id + " pickup up pickable at " + x + ", " + y + ".")
+ 						io.to(currentRoom).emit("pickUpObject", {x: x, y: y})
+ 					}
+
  					io.to(currentRoom).emit("moveCharacter", movementDatas)
 				}
 			}

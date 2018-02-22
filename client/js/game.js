@@ -1,4 +1,5 @@
-var socket = io("http://127.0.0.1:8080");
+//var socket = io("http://127.0.0.1:8080");
+var socket = io("http://192.168.204.112:8080");
 
 socket.on("roomList", 
 		function(data){
@@ -238,7 +239,8 @@ function placeObject(id, x, y)
 {
 	objects[x][y] = [];
 	
-	createdObjects.push({x: x, y: y});
+	var index = createdObjects.push({x: x, y: y}) -1;
+	objects[x][y][5] = index;
 	
 	if(bitmaps[id])
 	{
@@ -363,15 +365,15 @@ function resetTiles(add)
 				tiles[x][y] = new createjs.Sprite(levelBaseSheet);
 
 			if(x == xSize-1 && y == ySize-1)
-				tiles[x][y].gotoAndStop(20);
+				tiles[x][y].gotoAndStop(30);
 			else if(x == 0 && y == 0)
 				tiles[x][y].gotoAndStop(8);
 			else if(x == xSize-1 && y == 0)
 				tiles[x][y].gotoAndStop(12);
 			else if(x == 0 && y == ySize-1)
-				tiles[x][y].gotoAndStop(21);
+				tiles[x][y].gotoAndStop(31);
 			else if(y == ySize-1)
-				tiles[x][y].gotoAndStop(19);
+				tiles[x][y].gotoAndStop(27);
 			else if(x == 0)
 				tiles[x][y].gotoAndStop(6);
 			else if(x == xSize-1)
@@ -471,6 +473,20 @@ socket.on("sendRoomStructure",
 		}
 	});
 
+socket.on("pickUpObject", 
+	function(data){
+		var x = data.x;
+		var y = data.y;
+
+		stage.removeChild(objects[x][y][0]);
+		
+		console.log("delete object: " + objects[x][y][5])
+
+		createdObjects[objects[x][y][5]] = null;
+		
+		objects[x][y] = null;
+	});
+
 socket.on("moveCharacter", 
 	function(data){
 		/*
@@ -507,31 +523,34 @@ function render(event) {
 	
 	for(var i in createdObjects)
 	{
-		var x = createdObjects[i].x;
-		var y = createdObjects[i].y;
-		var obj = objects[x][y];
-		
-		if(obj[1] == "snowflake" || obj[1] == "cannonball" || obj[1] == "hourglass")
+		if(createdObjects[i])
 		{
-			objects[x][y][2] += event.delta/500;
+			var x = createdObjects[i].x;
+			var y = createdObjects[i].y;
+			var obj = objects[x][y];
 			
-			var progress = objects[x][y][2];
-			
-			if(progress > 2)
+			if(obj[1] == "snowflake" || obj[1] == "cannonball" || obj[1] == "hourglass")
 			{
-				objects[x][y][2] = 0;
+				objects[x][y][2] += event.delta/500;
 				
-				objects[x][y][0].y = objects[x][y][4];
-			}
-			else if(progress > 1)
-			{
-				progress = progress - 1;
+				var progress = objects[x][y][2];
 				
-				objects[x][y][0].y = objects[x][y][4]-5+5*EasingFunctions.easeInQuad(progress);
-			}
-			else
-			{
-				objects[x][y][0].y = objects[x][y][4]-5*EasingFunctions.easeOutQuad(progress);
+				if(progress > 2)
+				{
+					objects[x][y][2] = 0;
+					
+					objects[x][y][0].y = objects[x][y][4];
+				}
+				else if(progress > 1)
+				{
+					progress = progress - 1;
+					
+					objects[x][y][0].y = objects[x][y][4]-5+5*EasingFunctions.easeInQuad(progress);
+				}
+				else
+				{
+					objects[x][y][0].y = objects[x][y][4]-5*EasingFunctions.easeOutQuad(progress);
+				}
 			}
 		}
 	}
