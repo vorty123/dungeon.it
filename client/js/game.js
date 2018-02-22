@@ -160,8 +160,8 @@ function handleFileLoad(event)
 			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
 			animations: {
 				idle: [4, 5, true, 0.05],
-				jump1: [0, 1, false, 0.1],
-				jump2: [2, 3, "idle", 0.1],
+				jump1: [0, 1, false, 0.125],
+				jump2: [2, 3, "idle", 0.125],
 			}
 		});
 		console.log("player sheet loaded")
@@ -662,8 +662,8 @@ function render(event) {
 				var xv = jumpDatas[id][2]/2;
 				var yv = jumpDatas[id][3]/2;
 				
-				var xP = 0//Math.abs(yv*0.5)*players[id][0].scaleX;
-				var yP = -Math.abs(xv*0.5);
+				var xP = 1.75*(Math.abs(yv*0.25)*players[id][0].scaleX)
+				var yP = 1.75*(-Math.abs(xv*0.5) + (yv*0.5))
 				
 				players[id][0].x = jumpDatas[id][0]+xv*32+xP*32;
 				players[id][0].x += xv*32*progress;
@@ -680,8 +680,8 @@ function render(event) {
 				var xv = jumpDatas[id][2]/2;
 				var yv = jumpDatas[id][3]/2;
 				
-				var xP = 0//Math.abs(yv*0.5)*players[id][0].scaleX;
-				var yP = -Math.abs(xv*0.5);
+				var xP = 1.75*(Math.abs(yv*0.25)*players[id][0].scaleX)
+				var yP = 1.75*(-Math.abs(xv*0.5) + (yv*0.5))
 				
 				players[id][0].x = jumpDatas[id][0];
 				players[id][0].x += xv*32*progress;
