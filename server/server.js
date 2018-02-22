@@ -250,8 +250,6 @@ function getRandomSpawnPoint(room) {
 	return id;
 }
 
-
-
 function getTickCount()
 {
 	return (new Date).getTime();
@@ -278,34 +276,57 @@ io.on("connection", function(socket){
 			if(currentRoom && currentSpawnPoint >= 0 && playerDatas[socket.id] && playerDatas[socket.id].nextMove < getTickCount())
 			{
 				//console.log("mvchr2 " + playerDatas[socket.id].nextMove + ", " + getTickCount());
+				if(  (Math.abs(direction.x) == 0 || Math.abs(direction.x) == 1)
+				  && (Math.abs(direction.y) == 0 || Math.abs(direction.y) == 1))
 
-				var x = playerDatas[socket.id].x+direction.x
-				var y = playerDatas[socket.id].y+direction.y
-
-				if(x >= 1 && y >= 1 && x <= 19 && y <= 19 &&
-					(!roomStructures[currentRoom].roomCollisions[x] || roomStructures[currentRoom].roomCollisions[x][y] != "nomove"))
 				{
-					//console.log("user " + socket.id + " move char: " + direction.x + ", " + direction.y);
+					var x = playerDatas[socket.id].x
+					var y = playerDatas[socket.id].y
 
- 					var movementDatas = {
- 						soc: socket.id,
- 						x: playerDatas[socket.id].x,
- 						y: playerDatas[socket.id].y,
- 						direction: direction
- 					}
+					if(direction.px != x || direction.py != y)
+					{
+						if(Math.abs(direction.px-x) > 2 || Math.abs(direction.py-y) > 2)
+						{
+							io.to(currentRoom).emit("teleportCharacter", {soc: socket.id, x: x, y: y})
+						}
+						else
+						{
+							x = direction.px;
+							y = direction.py;
+						}
+					}
 
- 					playerDatas[socket.id].x = x
- 					playerDatas[socket.id].y = y
- 					playerDatas[socket.id].nextMove = getTickCount()+240
+					x += direction.x
+					y += direction.y
 
- 					if(roomStructures[currentRoom].roomCollisions[x] && roomStructures[currentRoom].roomCollisions[x][y] == "pickable")
- 					{
- 						roomStructures[currentRoom].roomCollisions[x][y] = null
- 						console.log("user " + socket.id + " pickup up pickable at " + x + ", " + y + ".")
- 						io.to(currentRoom).emit("pickUpObject", {x: x, y: y})
- 					}
+					if(x >= 1 && y >= 1 && x <= 19 && y <= 19 &&
+						(!roomStructures[currentRoom].roomCollisions[x] || roomStructures[currentRoom].roomCollisions[x][y] != "nomove"))
+					{
+						//console.log("user " + socket.id + " move char: " + direction.x + ", " + direction.y);
 
- 					io.to(currentRoom).emit("moveCharacter", movementDatas)
+	 					var movementDatas = {
+	 						soc: socket.id,
+	 						x: playerDatas[socket.id].x,
+	 						y: playerDatas[socket.id].y,
+	 						direction: direction
+	 					}
+
+	 					//console.log(x + ", " + y)
+
+	 					playerDatas[socket.id].x = x
+	 					playerDatas[socket.id].y = y
+	 					playerDatas[socket.id].nextMove = getTickCount()+200//240
+
+	 					if(roomStructures[currentRoom].roomCollisions[x] && roomStructures[currentRoom].roomCollisions[x][y] == "pickable")
+	 					{
+	 						roomStructures[currentRoom].roomCollisions[x][y] = null
+	 						console.log("user " + socket.id + " pickup up pickable at " + x + ", " + y + ".")
+	 						io.to(currentRoom).emit("pickUpObject", {x: x, y: y})
+	 						
+	 					}
+
+	 					io.to(currentRoom).emit("moveCharacter", movementDatas)
+					}
 				}
 			}
 		});
@@ -352,7 +373,7 @@ io.on("connection", function(socket){
 					x: x,
 					y: y,
 					color: color,
-					name: "name",
+					name: "Name",
 					soc: socket.id,
 					nextMove: 0,
 				}
@@ -369,7 +390,7 @@ io.on("connection", function(socket){
 				rooms[room].spawnPoints[currentSpawnPoint] = socket.id
 
 				//socket.emit
-				io.to(currentRoom).emit("sendRoomStructure", {struct: roomStructures[room], mySpawn: currentSpawnPoint, players: players});
+				io.to(currentRoom).emit("sendRoomStructure", {struct: roomStructures[room], mySpawn: currentSpawnPoint, players: players, collisions: roomStructures[currentRoom].roomCollisions});
 				
 				console.log("user " + socket.id + " joined room: " + room + ", (Sp: " + currentSpawnPoint + ") users in room: " + rooms[room].currentPlayers)
 			}

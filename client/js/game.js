@@ -1,6 +1,8 @@
 //var socket = io("http://127.0.0.1:8080");
 var socket = io("http://192.168.204.112:8080");
 
+var collisions = []
+
 socket.on("roomList", 
 		function(data){
 			$("#rooms").show()
@@ -28,6 +30,13 @@ $("#rooms").on("click", "a.joinRoom",
 // 65 (A) - 37 (ARROW_LEFT)
 // 68 (D) - 39 (ARROW_RIGHT)
 
+function getTickCount()
+{
+	return (new Date).getTime();
+}
+
+var nextMove = 0;
+
 var keyDown = 0
 
 $("body").keyup(
@@ -45,32 +54,40 @@ $("body").keydown(
 	function (event){
 		var key = event.which;
 
-		if(keyDown == 0)
+		if(keyDown == 0 && getTickCount()  > nextMove)
 		{
 			console.log("key event: " + key)
 			
 			if(key == 87 || key ==  38)
 			{
-				socket.emit("moveCharacter", {x: 0, y: -1}); //"up")
-				keyDown = key;
+				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
+				handleMove({soc: socket.id, direction: {x: 0, y: -1}}); //"up")
+				nextMove = getTickCount()+240;
+				keyDown = key
 				event.preventDefault();
 			}
 			else if(key == 83 || key ==  40)
 			{
-				socket.emit("moveCharacter", {x: 0, y: 1}); //"down")
-				keyDown = key;
+				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
+				handleMove({soc: socket.id, direction: {x: 0, y: 1}}); //"down")
+				nextMove = getTickCount()+240;
+				keyDown = key
 				event.preventDefault();
 			}
 			else if(key == 65 || key ==  37)
 			{
-				socket.emit("moveCharacter", {x: -1, y: 0}); //"left")
-				keyDown = key;
+				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
+				handleMove({soc: socket.id, direction: {x: -1, y: 0}}); //"left")
+				nextMove = getTickCount()+240;
+				keyDown = key
 				event.preventDefault();
 			}
 			else if(key == 68 || key ==  39)
 			{
-				socket.emit("moveCharacter", {x: 1, y: 0}); //"right")
-				keyDown = key;
+				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
+				handleMove({soc: socket.id, direction: {x: 1, y: 0}}); //"right")
+				nextMove = getTickCount()+240;
+				keyDown = key
 				event.preventDefault();
 			}
 		}
@@ -306,7 +323,7 @@ function createPlayer(id, x, y, socket, name, color)
 	console.log("create player " + name)
 
 
-	players[id][2] = new createjs.Text(name, "12px sans-serif", color);
+	players[id][2] = new createjs.Text(name, "12px 'Press Start 2P'", color);
 
 	players[id][2].x = players[id][0].x;
 	players[id][2].y = players[id][0].y-20;
@@ -319,15 +336,24 @@ function createPlayer(id, x, y, socket, name, color)
 	players[id][1].graphics.beginFill("rgba(0,0,0,0.65)").drawRect(0, 0, text*2+8, players[id][2].getBounds().height+2);
 
 	players[id][1].x = players[id][0].x - text - 4;
-	players[id][1].y = players[id][2].y + 1;
+	players[id][1].y = players[id][2].y - 2;
 
 	players[id][3] = text
+
+	players[id][4] = x
+	players[id][5] = y
 
 	playersBySocket[socket] = id
 
 	stage.addChild(players[id][0]);
 	stage.addChild(players[id][1]);
 	stage.addChild(players[id][2]);
+
+	for(var i=0; i<playersNum; i++)
+	{
+		stage.setChildIndex(players[i][1], stage.getNumChildren()-1);
+		stage.setChildIndex(players[i][2], stage.getNumChildren()-1);
+	}
 }
 
 var jumpDatas = []
@@ -450,6 +476,8 @@ socket.on("sendRoomStructure",
 		
 		//struct: roomStructures[room], mySpawn: currentSpawnPoint, players: rooms[room].spawnPoints
 
+		collisions = data.collisions;
+
 		var structure = data.struct;
 		
 		for(var i in structure.bites)
@@ -487,6 +515,42 @@ socket.on("pickUpObject",
 		objects[x][y] = null;
 	});
 
+function handleMove(data)
+{
+	var id = playersBySocket[data.soc];
+
+	if(data.x)
+	{
+		players[id][4] = data.x;
+		players[id][5] = data.y;
+	}
+
+	if((players[id][4]+data.direction.x) >= 1 && (players[id][5]+data.direction.y) >= 1 && (players[id][4]+data.direction.x) <= 19 && (players[id][5]+data.direction.y) <= 19 &&
+		(!collisions[(players[id][4]+data.direction.x)] || collisions[(players[id][4]+data.direction.x)][(players[id][5]+data.direction.y)] != "nomove"))
+	{
+		if(data.direction.x == -1)
+			players[id][0].scaleX = -1;
+		else if(data.direction.x == 1)
+			players[id][0].scaleX = 1;
+		
+		players[id][0].x = players[id][4]*32+16;
+		players[id][0].y = players[id][5]*32-8;
+
+		players[id][2].x = players[id][0].x;
+		players[id][2].y = players[id][0].y-20;
+		players[id][1].x = players[id][0].x - players[id][3] - 4;
+		players[id][1].y = players[id][2].y + 1;
+
+		jumpPlayer(id, data.direction.x, data.direction.y);
+
+		if(!data.x)
+		{
+			players[id][4] += data.direction.x;
+			players[id][5] += data.direction.y;
+		}
+	}
+}
+
 socket.on("moveCharacter", 
 	function(data){
 		/*
@@ -497,23 +561,38 @@ socket.on("moveCharacter",
 				direction: direction
 			}
 		*/
+		if(data.soc != socket.id)
+		{
+			handleMove(data);
+			console.log("remote movement")
+		}
+	});
 
-		var id = playersBySocket[data.soc];
+socket.on("teleportCharacter", 
+	function(data){
+		/*
+			var movementDatas = {
+				soc: socket.id,
+				x: playerDatas[socket.id].x,
+				y: playerDatas[socket.id].y,
+				direction: direction
+			}
+		*/
 
-		if(data.direction.x == -1)
-			players[id][0].scaleX = -1;
-		else if(data.direction.x == 1)
-			players[id][0].scaleX = 1;
+		var id = playersBySocket[socket.id]
 
-		players[id][0].x = data.x*32+16;
-		players[id][0].y = data.y*32-8;
+		players[id][4] = data.x;
+		players[id][5] = data.y;
+
+		players[id][0].x = players[id][4]*32+16;
+		players[id][0].y = players[id][5]*32-8;
 
 		players[id][2].x = players[id][0].x;
 		players[id][2].y = players[id][0].y-20;
 		players[id][1].x = players[id][0].x - players[id][3] - 4;
 		players[id][1].y = players[id][2].y + 1;
-
-		jumpPlayer(id, data.direction.x, data.direction.y);
+		
+		console.log("remote correction")
 	});
 
 var FPS = 0;
@@ -617,7 +696,7 @@ function render(event) {
 			players[id][2].x = players[id][0].x;
 			players[id][2].y = players[id][0].y-20;
 			players[id][1].x = players[id][0].x - players[id][3] - 4;
-			players[id][1].y = players[id][2].y + 1;
+			players[id][1].y = players[id][2].y - 2;
 		}
 	}
 	
