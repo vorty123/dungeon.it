@@ -1,18 +1,24 @@
 //var socket = io("http://127.0.0.1:8080");
-var socket = io("http://192.168.204.112:8080");
+var socket = io("http://192.168.1.7:8080");
 
 var collisions = []
 
+var inGame = false;
+
 socket.on("roomList", 
 		function(data){
-			$("#rooms").show()
-			$("#rooms").html("")
-			
-			for(var room in data)
+			if(!inGame)
 			{
-				//console.log(data[room])
-				$("#rooms").append(room + " " + data[room].currentPlayers + "/" + data[room].neededPlayers + " ");
-				$("<a class='joinRoom' id='" + room + "' href='#'>Belépés</a>").appendTo("#rooms");
+				$("#rooms").show()
+				$("#mainCanvas").hide()
+				$("#rooms").html("<br>")
+				
+				for(var room in data)
+				{
+					//console.log(data[room])
+					$("#rooms").append(room + " " + data[room].currentPlayers + "/" + data[room].neededPlayers + " ");
+					$("<a class='joinRoom' id='" + room + "' href='#'>Belépés</a>").appendTo("#rooms");
+				}
 			}
 		}
 	);
@@ -33,6 +39,11 @@ $("#rooms").on("click", "a.joinRoom",
 function getTickCount()
 {
 	return (new Date).getTime();
+}
+
+function randomBetween(min, max)
+{
+	return Math.floor((Math.random() * (max-min+1)) + min);
 }
 
 var nextMove = 0;
@@ -107,9 +118,14 @@ function resizeCanvas()
 {
 	var h = Math.min(window.innerHeight, window.innerWidth);
 	
-	h = Math.floor(h/16)*16
+	h = Math.floor(h/32)*32
 	
 	$("#mainCanvas").attr("style", "height: " + h + "px;")
+
+	if(!inGame)
+	{
+		$("#mainCanvas").hide()
+	}
 }
 
 var bitmaps = []
@@ -159,7 +175,7 @@ function handleFileLoad(event)
 			images: [event.result], 
 			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
 			animations: {
-				idle: [4, 5, true, 0.05],
+				idle: [4, 7, true, 0.05],
 				jump1: [0, 1, false, 0.125],
 				jump2: [2, 3, "idle", 0.125],
 			}
@@ -407,7 +423,22 @@ function resetTiles(add)
 			else if(y == 0)
 				tiles[x][y].gotoAndStop(4);
 			else
+			{
 				tiles[x][y].gotoAndStop(1);
+
+				var rand = randomBetween(1, 85)
+
+				console.log(rand)
+
+				if(rand >= 1 && rand <= 4)
+				{
+					tiles[x][y].gotoAndStop(35+rand);
+				}
+				else if(rand >= 5 && rand <= 8)
+				{
+					tiles[x][y].gotoAndStop(40+rand);
+				}
+			}
 
 			tiles[x][y].x = x*32;
 			tiles[x][y].y = y*32;
@@ -471,6 +502,9 @@ function handleComplete()
 socket.on("sendRoomStructure", 
 	function(data){
 		$("#rooms").hide();
+		$("#mainCanvas").show();
+
+		inGame = true;
 
 		resetTiles();
 		
