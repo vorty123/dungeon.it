@@ -184,7 +184,7 @@ function generateMap(room)
 
 	/* POWERUPOK */
 
-	var objs = randomBetween(5, 10);
+	var objs = randomBetween(10, 15);
 	
 	for(var i=0; i<objs; i++)
 	{
@@ -272,6 +272,54 @@ function getTickCount()
 }
 
 var playerDatas = []
+var projectiles = []
+
+function killPlayer(id)
+{
+	var x = playerDatas[id].sx;
+	var y = playerDatas[id].sy;
+
+	playerDatas[id].x = x;
+	playerDatas[id].y = y;
+
+	io.to(playerDatas[id].room).emit("teleportCharacter", {soc: id, x: x, y: y});
+}
+
+function checkProjectileDeath(currentRoom, timer, id, obj)
+{
+	projectiles[id].x += projectiles[id].xdir
+	projectiles[id].y += projectiles[id].ydir
+
+	var deleteProjectile = false;
+
+	if(projectiles[id].x > 21 || projectiles[id].x < 0 || projectiles[id].y > 21 || projectiles[id].y < 0)
+		deleteProjectile = true;
+	else if (roomStructures[currentRoom].roomCollisions[projectiles[id].x] && roomStructures[currentRoom].roomCollisions[projectiles[id].x][projectiles[id].y] && roomStructures[currentRoom].roomCollisions[projectiles[id].x][projectiles[id].y] != "pickable")
+		deleteProjectile = true;
+	else
+	{
+		if(projectiles[id].obj == "cannonball")
+		{
+			var users = getRoomUsers(currentRoom);
+
+			for(var uid in users)
+			{
+				if(playerDatas[uid].x == projectiles[id].x && playerDatas[uid].y == projectiles[id].y)
+				{
+					deleteProjectile = true;
+
+					killPlayer(uid);
+				}
+			}
+		}
+	}
+
+	if(deleteProjectile)
+	{
+		io.to(currentRoom).emit("deleteProjectile", id);
+		clearInterval(timer);
+	}
+}
 
 io.on("connection", function(socket){
 	clients ++;
@@ -287,14 +335,34 @@ io.on("connection", function(socket){
 	socket.on("putDownCarrying", 
 		function()
 		{
-			if(playerDatas[socket.id].carrying && ( !roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x] || !roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y]))
-			{
-				var id = createObject(currentRoom, playerDatas[socket.id].carrying, playerDatas[socket.id].x, playerDatas[socket.id].y);
-				roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y] = "pickable";
-				roomStructures[currentRoom].pickables[playerDatas[socket.id].x][playerDatas[socket.id].y] = id
-				
-				io.to(currentRoom).emit("objectCreated", {id: playerDatas[socket.id].carrying, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y, carrying: socket.id})
-				
+			if(playerDatas[socket.id].carrying && (!roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x] || !roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y]))
+			{	
+				if(playerDatas[socket.id].carrying == "cannonball" || playerDatas[socket.id].carrying == "snowflake")
+				{
+					projectile = {
+						x: playerDatas[socket.id].x,
+						y: playerDatas[socket.id].y,
+						obj: playerDatas[socket.id].carrying,
+						carrying: socket.id,
+						xdir: 1,
+						ydir: 0,
+					}
+
+					var id = projectiles.push(projectile) - 1;
+
+					io.to(currentRoom).emit("createProjectile", {id: id, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y, obj: playerDatas[socket.id].carrying, carrying: socket.id, xdir: 1, ydir: 0})
+
+					var timer = setInterval(function () { checkProjectileDeath(currentRoom, timer, id) }, 100)
+				}
+				else
+				{
+					var id = createObject(currentRoom, playerDatas[socket.id].carrying, playerDatas[socket.id].x, playerDatas[socket.id].y);
+					roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y] = "pickable";
+					roomStructures[currentRoom].pickables[playerDatas[socket.id].x][playerDatas[socket.id].y] = id
+					
+					io.to(currentRoom).emit("objectCreated", {id: playerDatas[socket.id].carrying, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y, carrying: socket.id})
+				}
+
 				playerDatas[socket.id].carrying = false
 			}
 		});
@@ -352,14 +420,21 @@ io.on("connection", function(socket){
 	 					{
 	 						roomStructures[currentRoom].roomCollisions[x][y] = null
 
-	 						playerDatas[socket.id].carrying = roomStructures[currentRoom].objects[roomStructures[currentRoom].pickables[x][y]].id;
+	 						if(roomStructures[currentRoom].objects[roomStructures[currentRoom].pickables[x][y]].id != "hourglass")
+	 						{
+	 							playerDatas[socket.id].carrying = roomStructures[currentRoom].objects[roomStructures[currentRoom].pickables[x][y]].id;
 
-	 						io.to(currentRoom).emit("pickUpObject", {x: x, y: y, soc: socket.id, obj: playerDatas[socket.id].carrying})
-	 						console.log("user " + socket.id + " pickup up pickable at " + x + ", " + y + " | " + playerDatas[socket.id].carrying + ".")
+	 							io.to(currentRoom).emit("pickUpObject", {x: x, y: y, soc: socket.id, obj: playerDatas[socket.id].carrying})
+	 						}
+	 						else
+	 						{
+	 							io.to(currentRoom).emit("pickUpObject", {x: x, y: y, obj: playerDatas[socket.id].carrying})
+	 						}
 
 	 						roomStructures[currentRoom].objects[roomStructures[currentRoom].pickables[x][y]] = null;
-	 						roomStructures[currentRoom].pickables[x][y] = null;
-	 						
+ 							roomStructures[currentRoom].pickables[x][y] = null;
+
+ 							console.log("user " + socket.id + " pickup up pickable at " + x + ", " + y + " | " + playerDatas[socket.id].carrying + ".")
 	 					}
 
 	 					io.to(currentRoom).emit("moveCharacter", movementDatas)
@@ -409,9 +484,12 @@ io.on("connection", function(socket){
 				playerDatas[socket.id] = {
 					x: x,
 					y: y,
+					sx: x,
+					sy: y,
 					color: color,
 					name: data.name,//"Name",
 					soc: socket.id,
+					room: currentRoom,
 					nextMove: 0,
 				}
 

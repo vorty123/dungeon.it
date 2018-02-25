@@ -1,7 +1,6 @@
 //var socket = io("http://127.0.0.1:8080");
 var socket = io("http://192.168.1.7:8080");
 
-
 var stage;
 var queue;
 
@@ -642,6 +641,39 @@ socket.on("sendRoomStructure",
 		}
 	});
 
+var projectiles = []
+
+socket.on("deleteProjectile", 
+	function(data) {
+		stage.removeChild(projectiles[data][0]);
+		projectiles[data] = null;
+	});
+
+socket.on("createProjectile", 
+	function(data) {
+		projectiles[data.id] = []
+		projectiles[data.id][0] = createObjectElement(data.obj);
+			
+		stage.addChild(projectiles[data.id][0]);
+
+		var w = projectiles[data.id][0].getBounds().width
+		var h = projectiles[data.id][0].getBounds().height
+		
+		projectiles[data.id][0].x = Math.floor(data.x*32 + 16 - w/2);
+		projectiles[data.id][0].y = Math.floor(data.y*32 + 16 - h/2)-8;
+
+		projectiles[data.id][1] = data.xdir; //xdir
+		projectiles[data.id][2] = data.ydir; //ydir
+
+		if(data.carrying)
+		{
+			var id = playersBySocket[data.carrying]
+			putPlayerInCarry(id)
+
+			setPlayersOrders()
+		}
+	});
+
 socket.on("pickUpObject", 
 	function(data){
 		var x = data.x;
@@ -652,9 +684,11 @@ socket.on("pickUpObject",
 		createdObjects[objects[x][y][5]] = null;
 		objects[x][y] = null;
 
-		var id = playersBySocket[data.soc]
-
-		putPlayerInCarry(id, data.obj)
+		if(data.soc)
+		{
+			var id = playersBySocket[data.soc];
+			putPlayerInCarry(id, data.obj);
+		}
 	});
 
 socket.on("destroyPlayer", 
@@ -758,7 +792,7 @@ socket.on("teleportCharacter",
 			}
 		*/
 
-		var id = playersBySocket[socket.id]
+		var id = playersBySocket[data.soc]
 
 		players[id][4] = data.x;
 		players[id][5] = data.y;
@@ -776,11 +810,21 @@ socket.on("teleportCharacter",
 
 var FPS = 0;
 
-var projectileSpeed = 90
+var projectileSpeed = 100 //hány ms egy tile
 
 function render(event) {
 	FPS = Math.floor(1000/event.delta)
 	
+	for(var i in projectiles)
+	{
+		if(projectiles[i])
+		{
+			console.log("projectile: " + i)
+			projectiles[i][0].x += projectiles[i][1] * (event.delta/projectileSpeed * 32)
+			projectiles[i][0].y += projectiles[i][2] * (event.delta/projectileSpeed * 32)
+		}
+	}
+
 	for(var i in createdObjects)
 	{
 		if(createdObjects[i])
@@ -815,7 +859,7 @@ function render(event) {
 		}
 	}
 	
-	for(var id=0; id<playersNum; id++)
+	for(var id in players)
 	{
 		if(jumpDatas[id])
 		{
