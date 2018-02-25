@@ -40,6 +40,17 @@ function randomBetween(min, max)
 	return Math.floor((Math.random() * (max-min+1)) + min);
 }
 
+function createObject(room, oid, x, y)
+{
+	var obj = {
+		id: oid,
+		x: x,
+		y: y,
+	} //chest
+	
+	return roomStructures[room].objects.push(obj) - 1;
+}
+
 function generateMap(room)
 {
 	var roomCollisions = [...Array(21).keys()].map(i => Array(21))
@@ -141,14 +152,11 @@ function generateMap(room)
 		console.log("generate bite: dir2, " + sY + ", " + ySize)
 	}
 	
-	var obj = {
-		id: 24,
-		x: 10,
-		y: 10,
-	} //chest
-	
-	roomStructures[room].objects.push(obj);
-	roomCollisions[10][10] = true;
+	/* LÁDA */
+
+	var id = createObject(room, 24, 10, 10);
+	roomCollisions[10][10] = "pickable";
+	pickables[10][10] = id
 	
 
 	/* HORDÓK */
@@ -162,13 +170,14 @@ function generateMap(room)
 		
 		if(!roomCollisions[x][y])
 		{
-			var obj = {
+			/*var obj = {
 				id: 26,
 				x: x,
 				y: y,
 			}
 			
-			roomStructures[room].objects.push(obj);
+			roomStructures[room].objects.push(obj);*/
+			createObject(room, 26, x, y);
 			roomCollisions[x][y] = "nomove";
 		}
 	}
@@ -201,13 +210,15 @@ function generateMap(room)
 				break;
 			}
 
-			var obj = {
+			/*var obj = {
 				id: rand,
 				x: x,
 				y: y,
 			}
 			
-			var id = roomStructures[room].objects.push(obj) - 1;
+			var id = roomStructures[room].objects.push(obj) - 1;*/
+
+			var id = createObject(room, rand, x, y);
 
 			roomCollisions[x][y] = "pickable";
 			pickables[x][y] = id;
@@ -273,6 +284,21 @@ io.on("connection", function(socket){
 	var currentSpawnPoint = -1;
 
 
+	socket.on("putDownCarrying", 
+		function()
+		{
+			if(playerDatas[socket.id].carrying && ( !roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x] || !roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y]))
+			{
+				var id = createObject(currentRoom, playerDatas[socket.id].carrying, playerDatas[socket.id].x, playerDatas[socket.id].y);
+				roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y] = "pickable";
+				roomStructures[currentRoom].pickables[playerDatas[socket.id].x][playerDatas[socket.id].y] = id
+				
+				io.to(currentRoom).emit("objectCreated", {id: playerDatas[socket.id].carrying, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y, carrying: socket.id})
+				
+				playerDatas[socket.id].carrying = false
+			}
+		});
+
 	socket.on("moveCharacter", 
 		function(direction)
 		{
@@ -322,11 +348,14 @@ io.on("connection", function(socket){
 	 					playerDatas[socket.id].y = y
 	 					playerDatas[socket.id].nextMove = getTickCount()+200//240
 
-	 					if(roomStructures[currentRoom].roomCollisions[x] && roomStructures[currentRoom].roomCollisions[x][y] == "pickable")
+	 					if(roomStructures[currentRoom].roomCollisions[x] && roomStructures[currentRoom].roomCollisions[x][y] == "pickable" && !playerDatas[socket.id].carrying)
 	 					{
 	 						roomStructures[currentRoom].roomCollisions[x][y] = null
-	 						console.log("user " + socket.id + " pickup up pickable at " + x + ", " + y + ".")
-	 						io.to(currentRoom).emit("pickUpObject", {x: x, y: y})
+
+	 						playerDatas[socket.id].carrying = roomStructures[currentRoom].objects[roomStructures[currentRoom].pickables[x][y]].id;
+
+	 						io.to(currentRoom).emit("pickUpObject", {x: x, y: y, soc: socket.id, obj: playerDatas[socket.id].carrying})
+	 						console.log("user " + socket.id + " pickup up pickable at " + x + ", " + y + " | " + playerDatas[socket.id].carrying + ".")
 
 	 						roomStructures[currentRoom].objects[roomStructures[currentRoom].pickables[x][y]] = null;
 	 						roomStructures[currentRoom].pickables[x][y] = null;
@@ -340,14 +369,14 @@ io.on("connection", function(socket){
 		});
 
 	socket.on("joinRoom", 
-		function(room){
+		function(data){
 			//console.log("user " + socket.id + " trying to join: " + room)
+			var room = data.room
+
 			if(!currentRoom && rooms[room] && getRoomUsersLength(room) < rooms[room].neededPlayers && !rooms[room].started)
 			{
 				currentRoom = room;
-				
-				socket.join(room);
-				refreshRoomPlayers(room);
+			
 
 				currentSpawnPoint = getRandomSpawnPoint(room);
 
@@ -381,7 +410,7 @@ io.on("connection", function(socket){
 					x: x,
 					y: y,
 					color: color,
-					name: "Name",
+					name: data.name,//"Name",
 					soc: socket.id,
 					nextMove: 0,
 				}
@@ -395,10 +424,15 @@ io.on("connection", function(socket){
 					players.push(playerDatas[id]);
 				}
 
+				players.push(playerDatas[socket.id]);
+
 				rooms[room].spawnPoints[currentSpawnPoint] = socket.id
 
-				//socket.emit
-				io.to(currentRoom).emit("sendRoomStructure", {struct: roomStructures[room], mySpawn: currentSpawnPoint, players: players, collisions: roomStructures[currentRoom].roomCollisions});
+				io.to(currentRoom).emit("createPlayer", playerDatas[socket.id])
+				socket.emit("sendRoomStructure", {struct: roomStructures[room], mySpawn: currentSpawnPoint, players: players, collisions: roomStructures[currentRoom].roomCollisions});
+
+				socket.join(room);
+				refreshRoomPlayers(room);
 				
 				console.log("user " + socket.id + " joined room: " + room + ", (Sp: " + currentSpawnPoint + ") users in room: " + rooms[room].currentPlayers)
 			}
@@ -406,9 +440,6 @@ io.on("connection", function(socket){
 
 	socket.on("disconnect", 
 		function(){
-			playerDatas[socket.id] = false;
-			clients --;
-
 			console.log("user " + socket.id + " disconnected, clients: " + clients + ", room:" + currentRoom);
 
 			if(currentRoom)
@@ -416,7 +447,21 @@ io.on("connection", function(socket){
 				console.log("user " + socket.id + " was in room " + currentRoom)
 				rooms[currentRoom].spawnPoints[currentSpawnPoint] = false
 				refreshRoomPlayers(currentRoom)
+
+				if(playerDatas[socket.id].carrying)
+				{
+					var id = createObject(currentRoom, playerDatas[socket.id].carrying, playerDatas[socket.id].x, playerDatas[socket.id].y);
+					roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y] = "pickable";
+					roomStructures[currentRoom].pickables[playerDatas[socket.id].x][playerDatas[socket.id].y] = id
+
+					io.to(currentRoom).emit("objectCreated", {id: playerDatas[socket.id].carrying, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y})
+				}
 			}
+
+			io.to(currentRoom).emit("destroyPlayer", socket.id)
+
+			playerDatas[socket.id] = false;
+			clients --;
 		});
 
 

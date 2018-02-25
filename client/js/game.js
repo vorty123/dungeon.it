@@ -1,6 +1,20 @@
 //var socket = io("http://127.0.0.1:8080");
 var socket = io("http://192.168.1.7:8080");
 
+
+var stage;
+var queue;
+
+var xSize = 21
+var ySize = 21
+
+var players = [];
+var playersBySocket = [];
+
+var tiles = [...Array(xSize).keys()].map(i => Array(ySize));
+var objects = [...Array(xSize).keys()].map(i => Array(ySize));
+
+
 var collisions = []
 
 var inGame = false;
@@ -9,13 +23,14 @@ socket.on("roomList",
 		function(data){
 			if(!inGame)
 			{
+				$("#settings").show()
 				$("#rooms").show()
 				$("#mainCanvas").hide()
 				$("#rooms").html("<br>")
 				
 				for(var room in data)
 				{
-					//console.log(data[room])
+					console.log("got room: " + room)
 					$("#rooms").append(room + " " + data[room].currentPlayers + "/" + data[room].neededPlayers + " ");
 					$("<a class='joinRoom' id='" + room + "' href='#'>Belépés</a>").appendTo("#rooms");
 				}
@@ -26,7 +41,7 @@ socket.on("roomList",
 
 $("#rooms").on("click", "a.joinRoom",
 	function (event){
-		socket.emit("joinRoom", $(this).attr("id"))
+		socket.emit("joinRoom", {room: $(this).attr("id"), name: $("#name").val()})
 		event.preventDefault();
 	});
 
@@ -69,7 +84,17 @@ $("body").keydown(
 		{
 			console.log("key event: " + key)
 			
-			if(key == 87 || key ==  38)
+			if(key == 32)
+			{
+				if(players[playersBySocket[socket.id]][6])
+				{
+					socket.emit("putDownCarrying")
+					keyDown = key
+					extMove = getTickCount()+240;
+					event.preventDefault();
+				}
+			}
+			else if(key == 87 || key ==  38)
 			{
 				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
 				handleMove({soc: socket.id, direction: {x: 0, y: -1}}); //"up")
@@ -108,11 +133,6 @@ $("body").keydown(
 		}
 	});
 
-var stage;
-var queue;
-
-var xSize = 21
-var ySize = 21
 
 function resizeCanvas()
 {
@@ -178,6 +198,10 @@ function handleFileLoad(event)
 				idle: [4, 7, true, 0.05],
 				jump1: [0, 1, false, 0.125],
 				jump2: [2, 3, "idle", 0.125],
+
+				idle_carrying: [4+8, 7+8, true, 0.05],
+				jump1_carrying: [0+8, 1+8, false, 0.125],
+				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
 			}
 		});
 		console.log("player sheet loaded")
@@ -199,12 +223,6 @@ function handleFileLoad(event)
 		console.log("bitmap loaded: " + event.item.id.substr(7))
 	}
 }
-
-var players = [];
-var playersBySocket = [];
-
-var tiles = [...Array(xSize).keys()].map(i => Array(ySize));
-var objects = [...Array(xSize).keys()].map(i => Array(ySize));
 
 //2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
 
@@ -268,6 +286,26 @@ function generateBiteInMap(y, dir, xsize, yize)
 
 var createdObjects = []
 
+function createObjectElement(id)
+{
+	if(bitmaps[id])
+	{
+		return (new createjs.Bitmap(bitmaps[id]));
+	}
+	else if(id == "hourglass")
+	{
+		return (new createjs.Sprite(hourglassSheet, "idle"));
+	}
+	else
+	{
+		var el = (new createjs.Sprite(levelBaseSheet));
+
+		el.gotoAndStop(id);
+
+		return el;
+	}
+}
+
 function placeObject(id, x, y)
 {
 	objects[x][y] = [];
@@ -277,7 +315,7 @@ function placeObject(id, x, y)
 	
 	if(bitmaps[id])
 	{
-		objects[x][y][0] = new createjs.Bitmap(bitmaps[id]);
+		objects[x][y][0] = createObjectElement(id);
 		
 		var w = objects[x][y][0].getBounds().width
 		var h = objects[x][y][0].getBounds().height
@@ -289,7 +327,7 @@ function placeObject(id, x, y)
 	}	
 	else if(id == "hourglass")
 	{
-		objects[x][y][0]= new createjs.Sprite(hourglassSheet, "idle");
+		objects[x][y][0] = createObjectElement(id);
 
 		var w = hourglassSheet.getFrameBounds(0).width
 		var h = hourglassSheet.getFrameBounds(0).height
@@ -301,9 +339,7 @@ function placeObject(id, x, y)
 	}
 	else
 	{
-		objects[x][y][0] = new createjs.Sprite(levelBaseSheet);
-
-		objects[x][y][0].gotoAndStop(id);
+		objects[x][y][0] = createObjectElement(id);
 
 		objects[x][y][0].x = x*32;
 		objects[x][y][0].y = y*32;
@@ -312,13 +348,29 @@ function placeObject(id, x, y)
 	}
 	
 	objects[x][y][1] = id;
-	objects[x][y][2] = 0;
+	objects[x][y][2] = Math.random()*2;
 	
 	objects[x][y][3] = objects[x][y][0].x;
 	objects[x][y][4] = objects[x][y][0].y;
 }
 
 var playersNum = 0;
+
+function setPlayersOrders()
+{
+	for(var i=0; i<playersNum; i++)
+	{
+		if(players[i])
+		{
+			stage.setChildIndex(players[i][0], stage.getNumChildren()-1);
+			stage.setChildIndex(players[i][1], stage.getNumChildren()-1);
+			stage.setChildIndex(players[i][2], stage.getNumChildren()-1);
+			
+			if(players[i][6])
+				stage.setChildIndex(players[i][6], stage.getNumChildren()-1);
+		}
+	}
+}
 
 function createPlayer(id, x, y, socket, name, color)
 {
@@ -365,11 +417,13 @@ function createPlayer(id, x, y, socket, name, color)
 	stage.addChild(players[id][1]);
 	stage.addChild(players[id][2]);
 
-	for(var i=0; i<playersNum; i++)
-	{
-		stage.setChildIndex(players[i][1], stage.getNumChildren()-1);
-		stage.setChildIndex(players[i][2], stage.getNumChildren()-1);
-	}
+	setPlayersOrders()
+
+	players[id][6] = false // carrying
+
+	console.log("player created: " + id)
+
+	return id
 }
 
 var jumpDatas = []
@@ -385,7 +439,10 @@ var jumpDatas = []
 
 function jumpPlayer(id, x, y)
 {	
-	players[id][0].gotoAndPlay("jump1");
+	if(players[id][6])
+		players[id][0].gotoAndPlay("jump1_carrying");
+	else
+		players[id][0].gotoAndPlay("jump1");
 	
 	jumpDatas[id] = [players[id][0].x, players[id][0].y, x, y, 0]
 }
@@ -397,7 +454,7 @@ function resetTiles(add)
 		for(y=0; y<ySize; y++)
 		{
 			//console.log(x + ", " + y)
-			
+				
 			if(objects[x][y])
 			{
 				stage.removeChild(objects[x][y][0])
@@ -457,11 +514,14 @@ function resetTiles(add)
 	createdObjects = []
 	objects = [...Array(xSize).keys()].map(i => Array(ySize))
 
-	for(var i=0; i<playersNum; i++)
+	for(var id=0; id<playersNum; id++)
 	{
-		stage.removeChild(players[i][0]);
-		stage.removeChild(players[i][1]);
-		stage.removeChild(players[i][2]);
+		stage.removeChild(players[id][0]);
+		stage.removeChild(players[id][1]);
+		stage.removeChild(players[id][2]);
+
+		if(players[id][6])
+			stage.removeChild(players[id][6]);
 	}
 
 	players = []
@@ -499,8 +559,47 @@ function handleComplete()
 	createjs.Ticker.on("tick", render);
 }
 
+socket.on("objectCreated", 
+	function(data){
+		placeObject(data.id, data.x, data.y)
+
+		if(data.carrying)
+		{
+			var id = playersBySocket[data.carrying]
+			putPlayerInCarry(id)
+
+			setPlayersOrders()
+		}
+	})
+
+function putPlayerInCarry(id, obj)
+{
+	if(obj)
+	{
+		players[id][6] = createObjectElement(obj);
+
+		var w = players[id][6].getBounds().width;
+		players[id][6].regX = Math.floor(w/2);
+		players[id][6].regY = players[id][6].getBounds().height;
+		
+		stage.addChild(players[id][6])
+	}
+	else
+	{
+		stage.removeChild(players[id][6])
+
+		players[id][6] = null
+	}
+
+	if(players[id][6])
+		players[id][0].gotoAndPlay("idle_carrying");
+	else
+		players[id][0].gotoAndPlay("idle");
+}
+
 socket.on("sendRoomStructure", 
 	function(data){
+		$("#settings").hide();
 		$("#rooms").hide();
 		$("#mainCanvas").show();
 
@@ -526,12 +625,18 @@ socket.on("sendRoomStructure",
 				placeObject(structure.objects[i].id, structure.objects[i].x, structure.objects[i].y)
 		}
 
+		playersNum = 0;
+
 		for(var i=0; i<4; i++)
 		{
 			if(data.players[i])
 			{
 
-				createPlayer(playersNum, data.players[i].x, data.players[i].y, data.players[i].soc, data.players[i].name, data.players[i].color);
+				var id = createPlayer(playersNum, data.players[i].x, data.players[i].y, data.players[i].soc, data.players[i].name, data.players[i].color);
+
+				if(data.players[i].carrying)
+					putPlayerInCarry(id, data.players[i].carrying)
+
 				playersNum ++;
 			}
 		}
@@ -543,12 +648,50 @@ socket.on("pickUpObject",
 		var y = data.y;
 
 		stage.removeChild(objects[x][y][0]);
-		
 		console.log("delete object: " + objects[x][y][5])
-
 		createdObjects[objects[x][y][5]] = null;
-		
 		objects[x][y] = null;
+
+		var id = playersBySocket[data.soc]
+
+		putPlayerInCarry(id, data.obj)
+	});
+
+socket.on("destroyPlayer", 
+	function(data){
+		var id = playersBySocket[data]
+		playersBySocket[data] = null
+
+		stage.removeChild(players[id][0]);
+		stage.removeChild(players[id][1]);
+		stage.removeChild(players[id][2]);
+
+		if(players[id][6])
+			stage.removeChild(players[id][6]);
+
+		players[id] = null
+	});
+
+socket.on("createPlayer", 
+	function(data){
+		var freePlayer = 0;
+		
+		for(var id=0; id<playersNum+1; id++)
+		{
+			if(!players[id])
+			{
+				freePlayer = id;
+				break;
+			}
+		}
+
+		var id = createPlayer(freePlayer, data.x, data.y, data.soc, data.name, data.color);
+
+		if(data.carrying)
+			putPlayerInCarry(id, data.carrying)
+
+		if(id > playersNum)
+			playersNum = id
 	});
 
 function handleMove(data)
@@ -633,6 +776,8 @@ socket.on("teleportCharacter",
 
 var FPS = 0;
 
+var projectileSpeed = 90
+
 function render(event) {
 	FPS = Math.floor(1000/event.delta)
 	
@@ -691,7 +836,12 @@ function render(event) {
 				
 				//console.log("p2 " + progress);
 				if(players[id][0].currentAnimation != "jump2")
-					players[id][0].gotoAndPlay("jump2");
+				{
+					if(players[id][6])
+						players[id][0].gotoAndPlay("jump2_carrying");
+					else
+						players[id][0].gotoAndPlay("jump2");
+				}
 				
 				var xv = jumpDatas[id][2]/2;
 				var yv = jumpDatas[id][3]/2;
@@ -733,6 +883,15 @@ function render(event) {
 			players[id][2].y = players[id][0].y-20;
 			players[id][1].x = players[id][0].x - players[id][3] - 4;
 			players[id][1].y = players[id][2].y - 2;
+		}
+
+		if(players[id])
+		{
+			if(players[id][6])
+			{
+				players[id][6].x = players[id][0].x
+				players[id][6].y = players[id][0].y+20
+			}
 		}
 	}
 	
