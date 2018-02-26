@@ -437,6 +437,36 @@ function joinRoom(socket, data, currentRoom)
 
 		socket.join(room);
 		refreshRoomPlayers(room);
+
+		var needed = rooms[room].neededPlayers-rooms[room].currentPlayers
+
+		if(needed == 0)
+		{
+			io.to(currentRoom).emit("chatMessage",  "<font color='mediumseagreen'>Starting countdown...</font>")
+
+			rooms[currentRoom].cd = true
+			io.to(currentRoom).emit("bigText", {text: false})
+			
+			setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "READY!", time: 900, size: 1}) }, 2000)
+			setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "SET!", time: 900, size: 1}) }, 3000)
+			setTimeout(function () { 
+				if(rooms[currentRoom])
+				{
+					io.to(currentRoom).emit("bigText", {text: "<font color='mediumseagreen'>GO!</font>", time: 1500, size: 2})
+					io.to(currentRoom).emit("chatMessage",  "Game <font color='mediumseagreen'>started</font>!")
+					io.to(currentRoom).emit("gameStarted", true)
+
+					rooms[currentRoom].started = true
+					rooms[currentRoom].cd = false
+
+					io.emit("roomList", rooms)
+				}
+			}, 4000)
+		}
+		else if(needed == 1)
+			io.to(currentRoom).emit("chatMessage",  "<font color='mediumseagreen'>" + needed + "</font> more player needed to start game")
+		else
+			io.to(currentRoom).emit("chatMessage",  "<font color='mediumseagreen'>" + needed + "</font> more players needed to start game")
 		
 		console.log("user " + socket.id + " joined room: " + room + ", (Sp: " + currentSpawnPoint + ") users in room: " + rooms[room].currentPlayers)
 
@@ -562,7 +592,17 @@ io.on("connection", function(socket){
 	 					playerDatas[socket.id].y = y
 	 					playerDatas[socket.id].nextMove = getTickCount()+200//240
 
-	 					if(roomStructures[currentRoom].roomCollisions[x] && roomStructures[currentRoom].roomCollisions[x][y] == "pickable" && !playerDatas[socket.id].carrying)
+	 					if(x == playerDatas[socket.id].sx && y == playerDatas[socket.id].sy)
+	 					{
+	 						if(playerDatas[socket.id].carrying == 24)
+	 						{
+	 							rooms[currentRoom].started = false;
+
+	 							io.to(currentRoom).emit("bigText", {text: "Game over!<br><br>Winner: <font color='" + playerDatas[socket.id].color + "'>" + playerDatas[socket.id].name + "</font>", time: false, size: 0.5})
+	 							io.to(currentRoom).emit("gameStarted", false)
+	 						}
+	 					}
+	 					else if(roomStructures[currentRoom].roomCollisions[x] && roomStructures[currentRoom].roomCollisions[x][y] == "pickable" && !playerDatas[socket.id].carrying)
 	 					{
 	 						roomStructures[currentRoom].roomCollisions[x][y] = null
 
@@ -633,6 +673,25 @@ io.on("connection", function(socket){
 			console.log("user " + socket.id + " joined room '" + currentRoom + "'")
 		});
 
+	socket.on("leaveRoom",
+		function(){
+			if(currentRoom && !rooms[currentRoom].started && !rooms[currentRoom].cd)
+			{
+				console.log("user " + socket.id + " leaved room " + currentRoom)
+				rooms[currentRoom].spawnPoints[currentSpawnPoint] = false
+
+				socket.emit("leavedRoom")
+
+				socket.leave(currentRoom)
+
+				refreshRoomPlayers(currentRoom)
+
+				currentRoom = false;
+				currentSpawnPoint = false;
+				playerDatas[socket.id] = false;
+			}
+		})
+
 	socket.on("disconnect", 
 		function(){
 			console.log("user " + socket.id + " disconnected, clients: " + clients + ", room:" + currentRoom);
@@ -641,7 +700,6 @@ io.on("connection", function(socket){
 			{
 				console.log("user " + socket.id + " was in room " + currentRoom)
 				rooms[currentRoom].spawnPoints[currentSpawnPoint] = false
-				refreshRoomPlayers(currentRoom)
 
 				if(playerDatas[socket.id].carrying)
 				{
@@ -651,6 +709,8 @@ io.on("connection", function(socket){
 
 					io.to(currentRoom).emit("objectCreated", {id: playerDatas[socket.id].carrying, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y})
 				}
+
+				refreshRoomPlayers(currentRoom)
 
 				io.to(currentRoom).emit("chatMessage", "<font color='" + playerDatas[socket.id].color + "'>" + playerDatas[socket.id].name + "</font> disconnected")
 				io.to(currentRoom).emit("destroyPlayer", socket.id)

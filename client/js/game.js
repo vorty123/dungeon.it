@@ -22,6 +22,7 @@ $("#settings").hide();
 $("#rooms").hide();
 $("#mainCanvas").hide()
 $("#onlineData").html("")
+$(".bigtext").html("")
 
 socket.on("roomList", 
 		function(data){
@@ -31,6 +32,7 @@ socket.on("roomList",
 				$("#rooms").show()
 				$("#mainCanvas").hide()
 				$("#onlineData").html("")
+				$(".bigtext").html("")
 				$("#rooms").html("<br><br><br>")
 				
 				console.log(data)
@@ -41,7 +43,13 @@ socket.on("roomList",
 					{
 						console.log("got room: " + room)
 						$("#rooms").append(room + " " + data[room].currentPlayers + "/" + data[room].neededPlayers + " ");
-						$("<button type='button' class='joinRoom' id='" + room + "'>Join</button><br><br>").appendTo("#rooms");
+						
+						if(data[room].started)
+							$("#rooms").append("<i>already started</i><br><br>")
+						else if(data[room].currentPlayers >= data[room].neededPlayers)
+							$("#rooms").append("<i>room full</i><br><br>")
+						else
+							$("<button type='button' class='joinRoom' id='" + room + "'>Join room</button><br><br>").appendTo("#rooms");
 					}
 				}
 			}
@@ -56,6 +64,12 @@ $("#createRoom").click(function() {
 $("#rooms").on("click", "button.joinRoom",
 	function (event){
 		socket.emit("joinRoom", {room: $(this).attr("id"), name: $("#name").val()})
+		event.preventDefault();
+	});
+
+$(".bigtext").on("click", "button.leaveRoom",
+	function (event){
+		socket.emit("leaveRoom")
 		event.preventDefault();
 	});
 
@@ -91,6 +105,11 @@ $("body").keyup(
 	});
 
 var started = false
+
+socket.on("gameStarted", 
+	function (data){
+		started = data;
+	});
 
 $("body").keydown(
 	function (event){
@@ -186,6 +205,7 @@ function resizeCanvas()
 	{
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
+		$(".bigtext").html("")
 	}
 }
 
@@ -206,7 +226,12 @@ function init()
 	queue.on("fileload", handleFileLoad, this);
 
 	queue.loadFile({id:"levelbase", src:"img/levelbase.png"});
-	queue.loadFile({id:"player_sheet", src:"img/player_sheet.png"});
+
+	queue.loadFile({id:"player_sheet_blue", src:"img/player_sheet_blue.png"});
+	queue.loadFile({id:"player_sheet_red", src:"img/player_sheet_red.png"});
+	queue.loadFile({id:"player_sheet_green", src:"img/player_sheet_green.png"});
+	queue.loadFile({id:"player_sheet_yellow", src:"img/player_sheet_yellow.png"});
+
 	queue.loadFile({id:"hourglass_sheet", src:"img/hourglass_sheet.png"});
 	
 	queue.loadFile({id:"bitmap:cannonball", src:"img/cannonball.png"});
@@ -216,7 +241,10 @@ function init()
 }
 
 var levelBaseSheet;
-var playerSheet;
+var playerSheet_blue;
+var playerSheet_red;
+var playerSheet_green;
+var playerSheet_yellow;
 var hourglassSheet;
 
 function handleFileLoad(event)
@@ -230,9 +258,60 @@ function handleFileLoad(event)
 		});
 		console.log("base sheet loaded")
 	}
-	else if(event.item.id == "player_sheet")
+	else if(event.item.id == "player_sheet_green")
 	{
-		playerSheet = new createjs.SpriteSheet({
+		playerSheet_green = new createjs.SpriteSheet({
+			images: [event.result], 
+			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
+			animations: {
+				idle: [4, 7, true, 0.075],
+				jump1: [0, 1, false, 0.125],
+				jump2: [2, 3, "idle", 0.125],
+
+				idle_carrying: [4+8, 7+8, true, 0.075],
+				jump1_carrying: [0+8, 1+8, false, 0.125],
+				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
+			}
+		});
+		console.log("player sheet loaded")
+	}
+	else if(event.item.id == "player_sheet_red")
+	{
+		playerSheet_red = new createjs.SpriteSheet({
+			images: [event.result], 
+			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
+			animations: {
+				idle: [4, 7, true, 0.075],
+				jump1: [0, 1, false, 0.125],
+				jump2: [2, 3, "idle", 0.125],
+
+				idle_carrying: [4+8, 7+8, true, 0.075],
+				jump1_carrying: [0+8, 1+8, false, 0.125],
+				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
+			}
+		});
+		console.log("player sheet loaded")
+	}
+	else if(event.item.id == "player_sheet_blue")
+	{
+		playerSheet_blue = new createjs.SpriteSheet({
+			images: [event.result], 
+			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
+			animations: {
+				idle: [4, 7, true, 0.075],
+				jump1: [0, 1, false, 0.125],
+				jump2: [2, 3, "idle", 0.125],
+
+				idle_carrying: [4+8, 7+8, true, 0.075],
+				jump1_carrying: [0+8, 1+8, false, 0.125],
+				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
+			}
+		});
+		console.log("player sheet loaded")
+	}
+	else if(event.item.id == "player_sheet_yellow")
+	{
+		playerSheet_yellow = new createjs.SpriteSheet({
 			images: [event.result], 
 			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
 			animations: {
@@ -417,11 +496,21 @@ function createPlayer(id, x, y, socket, name, color)
 {
 	players[id] = []
 	
-	players[id][0] = new createjs.Sprite(playerSheet, "idle");
+	var sheet = playerSheet_green
+
+	if(color == "darkcyan")
+		sheet = playerSheet_blue
+	else if(color == "indianred")
+		sheet = playerSheet_red
+	else if(color == "gold")
+		sheet = playerSheet_yellow
+
+
+	players[id][0] = new createjs.Sprite(sheet, "idle");
 	
 	
-	var w = playerSheet.getFrameBounds(0).width;
-	var h = playerSheet.getFrameBounds(0).height;
+	var w = sheet.getFrameBounds(0).width;
+	var h = sheet.getFrameBounds(0).height;
 	
 	players[id][0].regX = Math.floor(w/2);
 
@@ -688,6 +777,9 @@ socket.on("sendRoomStructure",
 				playersNum ++;
 			}
 		}
+
+		$(".bigtext").css("font-size", "100%");
+		$(".bigtext").html("Waiting for players...<br><br><button type='button' class='leaveRoom' style='width: 50%; margin: 0 auto;'>Back to menu</button>")
 	});
 
 var projectiles = []
@@ -743,22 +835,45 @@ socket.on("pickUpObject",
 
 socket.on('connect', 
 	function() {
+		inGame = false;
+		started = false;
+		
 		$("#settings").show();
 		$("#rooms").show();
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
+		$(".bigtext").html("")
 
 
 		$("#chat").append("<li style='color: mediumseagreen;'>Successfully connected to server!</li>");
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
 	});
 
-socket.on('disconnect', 
+socket.on('leavedRoom', 
 	function() {
+		inGame = false;
+		started = false;
+
 		$("#settings").hide();
 		$("#rooms").hide();
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
+		$(".bigtext").html("")
+
+		$("#chat").append("<li style='color: indianred;'>Leaved room</li>");
+		$("#chat").animate({ scrollTop: $(document).height() }, 400);
+	});
+
+socket.on('disconnect', 
+	function() {
+		inGame = false;
+		started = false;
+
+		$("#settings").hide();
+		$("#rooms").hide();
+		$("#mainCanvas").hide()
+		$("#onlineData").html("")
+		$(".bigtext").html("")
 
 		$("#chat").append("<li style='color: indianred;'>Connection to the server was lost!</li>");
 		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
@@ -767,14 +882,48 @@ socket.on('disconnect',
 
 socket.on('connect_error', 
 	function() {
+		inGame = false;
+		started = false;
+		
 		$("#settings").hide();
 		$("#rooms").hide();
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
+		$(".bigtext").html("")
 
 		$("#chat").append("<li style='color: indianred;'>Failed to connect to server!</li>");
 		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
+	});
+
+var tmo = false;
+
+socket.on("bigText", 
+	function(data) {
+		if(tmo)
+			clearTimeout(tmo);
+
+		tmo = false;
+
+		if(data.text)
+		{
+			$(".bigtext").html(data.text);
+			$(".bigtext").css("font-size", (400*data.size)+"%");
+
+			if(data.time)
+			{
+				$(".bigtext").animate({ "font-size": (200*data.size)+"%" }, data.time);
+				tmo = setTimeout(function () { $(".bigtext").html(""); tmo = false; }, data.time)
+			}
+			else
+			{
+			   $(".bigtext").append("<br><button type='button' class='leaveRoom' style='width: 50%; margin: 0 auto;'>Back to menu</button>")
+			}
+		}
+		else
+		{
+			$(".bigtext").html("");
+		}
 	});
 
 socket.on("chatMessage", 
