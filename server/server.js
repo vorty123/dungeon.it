@@ -22,13 +22,27 @@ var rooms = {}
 var roomStructures = {}
 
 rooms["Teszt szoba"] = {
-	neededPlayers: 3,
+	neededPlayers: 4,
 	currentPlayers: 0,
 	started: false,
 	spawnPoints: [],
 }
 
 roomStructures["Teszt szoba"] = {
+	bites: [],
+	objects: [],
+	roomCollisions: [],
+	pickables: [],
+}
+
+rooms["Teszt szoba2"] = {
+	neededPlayers: 4,
+	currentPlayers: 0,
+	started: false,
+	spawnPoints: [],
+}
+
+roomStructures["Teszt szoba2"] = {
 	bites: [],
 	objects: [],
 	roomCollisions: [],
@@ -230,6 +244,7 @@ function generateMap(room)
 }
 
 generateMap("Teszt szoba")
+generateMap("Teszt szoba2")
 
 io.emit("roomList", rooms)
 
@@ -274,15 +289,34 @@ function getTickCount()
 var playerDatas = []
 var projectiles = []
 
-function killPlayer(id)
+function killPlayer(id, by)
 {
+
+	var room = playerDatas[id].room;
+
+	if(playerDatas[id].carrying)
+	{
+		var oid = createObject(room, playerDatas[id].carrying, playerDatas[id].x, playerDatas[id].y);
+		roomStructures[room].roomCollisions[playerDatas[id].x][playerDatas[id].y] = "pickable";
+		roomStructures[room].pickables[playerDatas[id].x][playerDatas[id].y] = oid
+
+		io.to(room).emit("objectCreated", {id: playerDatas[id].carrying, x: playerDatas[id].x, y: playerDatas[id].y, carrying: id})
+
+		playerDatas[id].carrying = null
+	}
+
 	var x = playerDatas[id].sx;
 	var y = playerDatas[id].sy;
 
 	playerDatas[id].x = x;
 	playerDatas[id].y = y;
 
-	io.to(playerDatas[id].room).emit("teleportCharacter", {soc: id, x: x, y: y});
+	io.to(room).emit("teleportCharacter", {soc: id, x: x, y: y});
+
+	if(by && playerDatas[by])
+		io.to(room).emit("chatMessage", "<font color='" + playerDatas[id].color + "'>" + playerDatas[id].name + "</font> killed by <font color='" + playerDatas[by].color + "'>" + playerDatas[by].name + "</font>")
+	else
+		io.to(room).emit("chatMessage", "<font color='" + playerDatas[id].color + "'>" + playerDatas[id].name + "</font> killed")
 }
 
 function checkProjectileDeath(currentRoom, timer, id, obj)
@@ -308,7 +342,7 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 				{
 					deleteProjectile = true;
 
-					killPlayer(uid);
+					killPlayer(uid, projectiles[id].carrying);
 				}
 			}
 		}
@@ -331,6 +365,14 @@ io.on("connection", function(socket){
 	var currentRoom = false;
 	var currentSpawnPoint = -1;
 
+
+	socket.on("writeChat", 
+		function(data)
+		{
+			//TODO: HTMLSPECIALCHARS
+			if(currentRoom)
+				io.to(currentRoom).emit("chatMessage", "<font color='" + playerDatas[socket.id].color + "'>" + playerDatas[socket.id].name + "</font>: " + data)
+		});
 
 	socket.on("putDownCarrying", 
 		function()
@@ -505,6 +547,9 @@ io.on("connection", function(socket){
 				players.push(playerDatas[socket.id]);
 
 				rooms[room].spawnPoints[currentSpawnPoint] = socket.id
+
+				io.to(currentRoom).emit("chatMessage", "<font color='" + color + "'>" + data.name + "</font> joined")
+				socket.emit("chatMessage", "Joined room '<font color='indianred'>" + room + "</font>'")
 
 				io.to(currentRoom).emit("createPlayer", playerDatas[socket.id])
 				socket.emit("sendRoomStructure", {struct: roomStructures[room], mySpawn: currentSpawnPoint, players: players, collisions: roomStructures[currentRoom].roomCollisions});

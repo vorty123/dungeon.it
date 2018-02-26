@@ -1,4 +1,4 @@
-var socket = io("http://127.0.0.1:8080");
+var socket = io("http://server.getthechest.com:8080");
 //var socket = io("http://192.168.1.7:8080");
 
 var stage;
@@ -31,7 +31,7 @@ socket.on("roomList",
 				{
 					console.log("got room: " + room)
 					$("#rooms").append(room + " " + data[room].currentPlayers + "/" + data[room].neededPlayers + " ");
-					$("<a class='joinRoom' id='" + room + "' href='#'>Belépés</a>").appendTo("#rooms");
+					$("<a class='joinRoom' id='" + room + "' href='#'>Join</a><br>").appendTo("#rooms");
 				}
 			}
 		}
@@ -79,56 +79,73 @@ $("body").keydown(
 	function (event){
 		var key = event.which;
 
-		if(keyDown == 0 && getTickCount()  > nextMove)
+		if($("#message").is(':focus'))
 		{
-			console.log("key event: " + key)
-			
-			if(key == 32)
+			if(key == 13)
 			{
-				if(players[playersBySocket[socket.id]][6])
-				{
-					socket.emit("putDownCarrying")
-					keyDown = key
-					extMove = getTickCount()+240;
-					event.preventDefault();
-				}
+				socket.emit("writeChat", $("#message").val())
+				$("#message").val("");
+				$("#message").blur();
 			}
-			else if(key == 87 || key ==  38)
+			else if(key == 27)
 			{
-				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
-				handleMove({soc: socket.id, direction: {x: 0, y: -1}}); //"up")
-				nextMove = getTickCount()+240;
-				keyDown = key
-				event.preventDefault();
-			}
-			else if(key == 83 || key ==  40)
-			{
-				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
-				handleMove({soc: socket.id, direction: {x: 0, y: 1}}); //"down")
-				nextMove = getTickCount()+240;
-				keyDown = key
-				event.preventDefault();
-			}
-			else if(key == 65 || key ==  37)
-			{
-				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
-				handleMove({soc: socket.id, direction: {x: -1, y: 0}}); //"left")
-				nextMove = getTickCount()+240;
-				keyDown = key
-				event.preventDefault();
-			}
-			else if(key == 68 || key ==  39)
-			{
-				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
-				handleMove({soc: socket.id, direction: {x: 1, y: 0}}); //"right")
-				nextMove = getTickCount()+240;
-				keyDown = key
-				event.preventDefault();
+				$("#message").val("");
+				$("#message").blur();
 			}
 		}
 		else
 		{
-			event.preventDefault();
+			if(keyDown == 0 && getTickCount()  > nextMove)
+			{
+				console.log("key event: " + key)
+				
+				if(key == 32)
+				{
+					if(players[playersBySocket[socket.id]][6])
+					{
+						socket.emit("putDownCarrying")
+						keyDown = key
+						extMove = getTickCount()+240;
+						event.preventDefault();
+					}
+				}
+				else if(key == 87 || key ==  38)
+				{
+					socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
+					handleMove({soc: socket.id, direction: {x: 0, y: -1}}); //"up")
+					nextMove = getTickCount()+240;
+					keyDown = key
+					event.preventDefault();
+				}
+				else if(key == 83 || key ==  40)
+				{
+					socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
+					handleMove({soc: socket.id, direction: {x: 0, y: 1}}); //"down")
+					nextMove = getTickCount()+240;
+					keyDown = key
+					event.preventDefault();
+				}
+				else if(key == 65 || key ==  37)
+				{
+					socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
+					handleMove({soc: socket.id, direction: {x: -1, y: 0}}); //"left")
+					nextMove = getTickCount()+240;
+					keyDown = key
+					event.preventDefault();
+				}
+				else if(key == 68 || key ==  39)
+				{
+					socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
+					handleMove({soc: socket.id, direction: {x: 1, y: 0}}); //"right")
+					nextMove = getTickCount()+240;
+					keyDown = key
+					event.preventDefault();
+				}
+			}
+			else
+			{
+				event.preventDefault();
+			}
 		}
 	});
 
@@ -194,11 +211,11 @@ function handleFileLoad(event)
 			images: [event.result], 
 			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
 			animations: {
-				idle: [4, 7, true, 0.05],
+				idle: [4, 7, true, 0.075],
 				jump1: [0, 1, false, 0.125],
 				jump2: [2, 3, "idle", 0.125],
 
-				idle_carrying: [4+8, 7+8, true, 0.05],
+				idle_carrying: [4+8, 7+8, true, 0.075],
 				jump1_carrying: [0+8, 1+8, false, 0.125],
 				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
 			}
@@ -513,7 +530,7 @@ function resetTiles(add)
 	createdObjects = []
 	objects = [...Array(xSize).keys()].map(i => Array(ySize))
 
-	for(var id=0; id<playersNum; id++)
+	for(var id in players)
 	{
 		stage.removeChild(players[id][0]);
 		stage.removeChild(players[id][1]);
@@ -626,7 +643,7 @@ socket.on("sendRoomStructure",
 
 		playersNum = 0;
 
-		for(var i=0; i<4; i++)
+		for(var i in data.players)
 		{
 			if(data.players[i])
 			{
@@ -674,6 +691,7 @@ socket.on("createProjectile",
 		}
 	});
 
+
 socket.on("pickUpObject", 
 	function(data){
 		var x = data.x;
@@ -689,6 +707,12 @@ socket.on("pickUpObject",
 			var id = playersBySocket[data.soc];
 			putPlayerInCarry(id, data.obj);
 		}
+	});
+
+socket.on("chatMessage", 
+	function(data) {
+		$("#chat").append("<li>" + data + "</li>");
+		$("#chat").animate({ scrollTop: $(document).height() }, 250);
 	});
 
 socket.on("destroyPlayer", 
@@ -710,7 +734,7 @@ socket.on("createPlayer",
 	function(data){
 		var freePlayer = 0;
 		
-		for(var id=0; id<playersNum+1; id++)
+		for(var id=0; id<=players.length; id++)
 		{
 			if(!players[id])
 			{
@@ -718,6 +742,8 @@ socket.on("createPlayer",
 				break;
 			}
 		}
+
+		console.log("create player: " + freePlayer)
 
 		var id = createPlayer(freePlayer, data.x, data.y, data.soc, data.name, data.color);
 

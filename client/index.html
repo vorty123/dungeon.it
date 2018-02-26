@@ -42,8 +42,32 @@
 				display:block;
 			}
 
+			#chat {
+				display: block;
+				position: absolute;
+				top: 10%;
+				width: 24%;
+				height: 40%;
+				text-align: left;
+				font-size: 70%;
+				list-style-type: none;
+				padding-left: 5px;
+			}
+
+			#chat > li {
+				margin-bottom: 5px;
+			}
+
+			#message {
+				position: absolute;
+				top: 50%;
+				left: 5px;
+			}
+
 			.fpsCounterHolder {
 				position: absolute;
+				font-size: 70%;
+				padding-left: 5px;
 				top: 0;
 			}
 		</style>
@@ -56,6 +80,11 @@
 			</div>
 			<div id="rooms">
 			</div>
+			<ul id="chat">
+				<li>Welcome to getthechest.com!</li>
+			</ul>
+			<input type="text" id="message" placeholder="message">
+
 			<p class="fpsCounterHolder"><span class="fpsCounter">? FPS</span> <span class="pingCounter">? ms</span></p>
 			<canvas id="mainCanvas"></canvas>
 		</center>
