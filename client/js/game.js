@@ -95,7 +95,11 @@ $("body").keydown(
 		}
 		else
 		{
-			if(keyDown == 0 && getTickCount()  > nextMove)
+			if(key == 13 || key == 89 || key == 84)
+			{
+				$("#message").focus();
+			}
+			else if(keyDown == 0 && getTickCount()  > nextMove)
 			{
 				console.log("key event: " + key)
 				
@@ -712,7 +716,7 @@ socket.on("pickUpObject",
 socket.on("chatMessage", 
 	function(data) {
 		$("#chat").append("<li>" + data + "</li>");
-		$("#chat").animate({ scrollTop: $(document).height() }, 250);
+		$("#chat").animate({ scrollTop: $(document).height() }, 400);
 	});
 
 socket.on("destroyPlayer", 
