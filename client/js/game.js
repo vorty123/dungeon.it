@@ -18,6 +18,10 @@ var collisions = []
 
 var inGame = false;
 
+$("#settings").hide();
+$("#rooms").hide();
+$("#mainCanvas").hide()
+
 socket.on("roomList", 
 		function(data){
 			if(!inGame)
@@ -75,6 +79,8 @@ $("body").keyup(
 		}
 	});
 
+var started = false
+
 $("body").keydown(
 	function (event){
 		var key = event.which;
@@ -95,7 +101,7 @@ $("body").keydown(
 		}
 		else
 		{
-			if(key == 13 || key == 89 || key == 84)
+			if(inGame && (key == 13 || key == 89 || key == 84))
 			{
 				$("#message").focus();
 			}
@@ -619,6 +625,9 @@ function putPlayerInCarry(id, obj)
 
 socket.on("sendRoomStructure", 
 	function(data){
+		started = true
+		//TODO: START GAME
+
 		$("#settings").hide();
 		$("#rooms").hide();
 		$("#mainCanvas").show();
@@ -711,6 +720,39 @@ socket.on("pickUpObject",
 			var id = playersBySocket[data.soc];
 			putPlayerInCarry(id, data.obj);
 		}
+	});
+
+socket.on('connect', 
+	function() {
+		$("#settings").show();
+		$("#rooms").show();
+		$("#mainCanvas").hide()
+
+
+		$("#chat").append("<li>Successfully connected to server!</li>");
+		$("#chat").animate({ scrollTop: $(document).height() }, 400);
+	});
+
+socket.on('disconnect', 
+	function() {
+		$("#settings").hide();
+		$("#rooms").hide();
+		$("#mainCanvas").hide()
+
+		$("#chat").append("<li style='color: indianred;'>Disconnected from the server!</li>");
+		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
+		$("#chat").animate({ scrollTop: $(document).height() }, 400);
+	});
+
+socket.on('connect_error', 
+	function() {
+		$("#settings").hide();
+		$("#rooms").hide();
+		$("#mainCanvas").hide()
+
+		$("#chat").append("<li style='color: indianred;'>Failed to connect to server!</li>");
+		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
+		$("#chat").animate({ scrollTop: $(document).height() }, 400);
 	});
 
 socket.on("chatMessage", 
@@ -983,7 +1025,7 @@ setInterval(
 		});
 
 		
-	}, 150)
+	}, 500)
 	
 
 /*setInterval(

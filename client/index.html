@@ -56,7 +56,8 @@
 			}
 
 			#chat > li {
-				margin-bottom: 10px;
+				margin-bottom: 5px;
+    			line-height: 1.5;
 			}
 
 			#message {
@@ -72,6 +73,10 @@
 				padding-left: 5px;
 				top: 0;
 			}
+
+			.joinRoom {
+				text-decoration: none;
+			}
 		</style>
 	</head>
 	<body onload="init();">
@@ -79,11 +84,19 @@
 			<div id="settings">
 				<br>
 				Name: <input type="text" id="name" value="name">
+				<br><br>
+				Create room: <input type="text" id="roomName" value="room name"> 
+				<select>
+					<option>2</option>
+					<option>3</option>
+					<option>4</option>
+				</select>
+
 			</div>
 			<div id="rooms">
 			</div>
 			<ul id="chat">
-				<li>Welcome to getthechest.com!</li>
+				<li style="color: mediumseagreen;">Welcome to getthechest.com!</li>
 			</ul>
 			<input type="text" id="message" placeholder="message">
 
