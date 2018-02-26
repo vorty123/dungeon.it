@@ -15,6 +15,13 @@ http.listen(port, function(){
 
 var io = require('socket.io').listen(8080);
 
+var stdin = process.openStdin();
+
+stdin.addListener("data", function(d) {
+		var cmd = d.toString().trim();
+
+		console.log("command: [" + cmd + "]");
+	});
 
 var clients = 0
 
