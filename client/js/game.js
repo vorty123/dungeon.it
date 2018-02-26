@@ -1,5 +1,5 @@
-//var socket = io("http://127.0.0.1:8080");
-var socket = io("http://192.168.1.7:8080");
+var socket = io("http://127.0.0.1:8080");
+//var socket = io("http://192.168.1.7:8080");
 
 var stage;
 var queue;
@@ -357,7 +357,7 @@ var playersNum = 0;
 
 function setPlayersOrders()
 {
-	for(var i=0; i<playersNum; i++)
+	for(var i in players)
 	{
 		if(players[i])
 		{
