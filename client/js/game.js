@@ -21,6 +21,7 @@ var inGame = false;
 $("#settings").hide();
 $("#rooms").hide();
 $("#mainCanvas").hide()
+$("#onlineData").html("")
 
 socket.on("roomList", 
 		function(data){
@@ -29,20 +30,30 @@ socket.on("roomList",
 				$("#settings").show()
 				$("#rooms").show()
 				$("#mainCanvas").hide()
-				$("#rooms").html("<br>")
+				$("#onlineData").html("")
+				$("#rooms").html("<br><br><br>")
 				
+				console.log(data)
+
 				for(var room in data)
 				{
-					console.log("got room: " + room)
-					$("#rooms").append(room + " " + data[room].currentPlayers + "/" + data[room].neededPlayers + " ");
-					$("<a class='joinRoom' id='" + room + "' href='#'>Join</a><br>").appendTo("#rooms");
+					if(data[room])
+					{
+						console.log("got room: " + room)
+						$("#rooms").append(room + " " + data[room].currentPlayers + "/" + data[room].neededPlayers + " ");
+						$("<button type='button' class='joinRoom' id='" + room + "'>Join</button><br><br>").appendTo("#rooms");
+					}
 				}
 			}
 		}
 	);
 	
+//TODO: doesn't allow empty name for player and room & char limit
+$("#createRoom").click(function() {
+	socket.emit("createRoom", {name: $("#roomName").val(), num: $("#roomMaxPlayers").val(), player: $("#name").val()})
+});
 
-$("#rooms").on("click", "a.joinRoom",
+$("#rooms").on("click", "button.joinRoom",
 	function (event){
 		socket.emit("joinRoom", {room: $(this).attr("id"), name: $("#name").val()})
 		event.preventDefault();
@@ -109,47 +120,50 @@ $("body").keydown(
 			{
 				console.log("key event: " + key)
 				
-				if(key == 32)
+				if(started)
 				{
-					if(players[playersBySocket[socket.id]][6])
+					if(key == 32)
 					{
-						socket.emit("putDownCarrying")
+						if(players[playersBySocket[socket.id]][6])
+						{
+							socket.emit("putDownCarrying")
+							keyDown = key
+							extMove = getTickCount()+240;
+							event.preventDefault();
+						}
+					}
+					else if(key == 87 || key ==  38)
+					{
+						socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
+						handleMove({soc: socket.id, direction: {x: 0, y: -1}}); //"up")
+						nextMove = getTickCount()+240;
 						keyDown = key
-						extMove = getTickCount()+240;
 						event.preventDefault();
 					}
-				}
-				else if(key == 87 || key ==  38)
-				{
-					socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
-					handleMove({soc: socket.id, direction: {x: 0, y: -1}}); //"up")
-					nextMove = getTickCount()+240;
-					keyDown = key
-					event.preventDefault();
-				}
-				else if(key == 83 || key ==  40)
-				{
-					socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
-					handleMove({soc: socket.id, direction: {x: 0, y: 1}}); //"down")
-					nextMove = getTickCount()+240;
-					keyDown = key
-					event.preventDefault();
-				}
-				else if(key == 65 || key ==  37)
-				{
-					socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
-					handleMove({soc: socket.id, direction: {x: -1, y: 0}}); //"left")
-					nextMove = getTickCount()+240;
-					keyDown = key
-					event.preventDefault();
-				}
-				else if(key == 68 || key ==  39)
-				{
-					socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
-					handleMove({soc: socket.id, direction: {x: 1, y: 0}}); //"right")
-					nextMove = getTickCount()+240;
-					keyDown = key
-					event.preventDefault();
+					else if(key == 83 || key ==  40)
+					{
+						socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
+						handleMove({soc: socket.id, direction: {x: 0, y: 1}}); //"down")
+						nextMove = getTickCount()+240;
+						keyDown = key
+						event.preventDefault();
+					}
+					else if(key == 65 || key ==  37)
+					{
+						socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
+						handleMove({soc: socket.id, direction: {x: -1, y: 0}}); //"left")
+						nextMove = getTickCount()+240;
+						keyDown = key
+						event.preventDefault();
+					}
+					else if(key == 68 || key ==  39)
+					{
+						socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
+						handleMove({soc: socket.id, direction: {x: 1, y: 0}}); //"right")
+						nextMove = getTickCount()+240;
+						keyDown = key
+						event.preventDefault();
+					}
 				}
 			}
 			else
@@ -171,6 +185,7 @@ function resizeCanvas()
 	if(!inGame)
 	{
 		$("#mainCanvas").hide()
+		$("#onlineData").html("")
 	}
 }
 
@@ -511,7 +526,7 @@ function resetTiles(add)
 
 				var rand = randomBetween(1, 85)
 
-				console.log(rand)
+				//console.log(rand)
 
 				if(rand >= 1 && rand <= 4)
 				{
@@ -625,8 +640,7 @@ function putPlayerInCarry(id, obj)
 
 socket.on("sendRoomStructure", 
 	function(data){
-		started = true
-		//TODO: START GAME
+		started = false
 
 		$("#settings").hide();
 		$("#rooms").hide();
@@ -666,6 +680,11 @@ socket.on("sendRoomStructure",
 				if(data.players[i].carrying)
 					putPlayerInCarry(id, data.players[i].carrying)
 
+				if(data.players[i].soc == socket.id)
+				{
+					$("#onlineData").html(data.name + "/<font color='" + data.players[i].color + "'>" + data.players[i].name + "</font>");
+				}
+
 				playersNum ++;
 			}
 		}
@@ -676,7 +695,7 @@ var projectiles = []
 socket.on("deleteProjectile", 
 	function(data) {
 		stage.removeChild(projectiles[data][0]);
-		projectiles[data] = null;
+		delete projectiles[data];
 	});
 
 socket.on("createProjectile", 
@@ -712,7 +731,7 @@ socket.on("pickUpObject",
 
 		stage.removeChild(objects[x][y][0]);
 		console.log("delete object: " + objects[x][y][5])
-		createdObjects[objects[x][y][5]] = null;
+		delete createdObjects[objects[x][y][5]];
 		objects[x][y] = null;
 
 		if(data.soc)
@@ -727,9 +746,10 @@ socket.on('connect',
 		$("#settings").show();
 		$("#rooms").show();
 		$("#mainCanvas").hide()
+		$("#onlineData").html("")
 
 
-		$("#chat").append("<li>Successfully connected to server!</li>");
+		$("#chat").append("<li style='color: mediumseagreen;'>Successfully connected to server!</li>");
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
 	});
 
@@ -738,8 +758,9 @@ socket.on('disconnect',
 		$("#settings").hide();
 		$("#rooms").hide();
 		$("#mainCanvas").hide()
+		$("#onlineData").html("")
 
-		$("#chat").append("<li style='color: indianred;'>Disconnected from the server!</li>");
+		$("#chat").append("<li style='color: indianred;'>Connection to the server was lost!</li>");
 		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
 	});
@@ -749,6 +770,7 @@ socket.on('connect_error',
 		$("#settings").hide();
 		$("#rooms").hide();
 		$("#mainCanvas").hide()
+		$("#onlineData").html("")
 
 		$("#chat").append("<li style='color: indianred;'>Failed to connect to server!</li>");
 		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
@@ -764,7 +786,7 @@ socket.on("chatMessage",
 socket.on("destroyPlayer", 
 	function(data){
 		var id = playersBySocket[data]
-		playersBySocket[data] = null
+		delete playersBySocket[data];
 
 		stage.removeChild(players[id][0]);
 		stage.removeChild(players[id][1]);
@@ -773,7 +795,7 @@ socket.on("destroyPlayer",
 		if(players[id][6])
 			stage.removeChild(players[id][6]);
 
-		players[id] = null
+		delete players[id];
 	});
 
 socket.on("createPlayer", 

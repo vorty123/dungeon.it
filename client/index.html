@@ -77,6 +77,11 @@
 			.joinRoom {
 				text-decoration: none;
 			}
+
+			input, button, select {
+				font-family: 'Press Start 2P', cursive;
+				font-size: 85%;
+			}
 		</style>
 	</head>
 	<body onload="init();">
@@ -86,21 +91,21 @@
 				Name: <input type="text" id="name" value="name">
 				<br><br>
 				Create room: <input type="text" id="roomName" value="room name"> 
-				<select>
+				<select id="roomMaxPlayers">
 					<option>2</option>
 					<option>3</option>
 					<option>4</option>
 				</select>
-
+				<button type="button" id="createRoom">Create</button>
 			</div>
 			<div id="rooms">
 			</div>
 			<ul id="chat">
-				<li style="color: mediumseagreen;">Welcome to getthechest.com!</li>
+				<li>Welcome to getthechest.com!</li>
 			</ul>
 			<input type="text" id="message" placeholder="message">
 
-			<p class="fpsCounterHolder"><span class="fpsCounter">? FPS</span> <span class="pingCounter">? ms</span></p>
+			<p class="fpsCounterHolder"><span class="fpsCounter">? FPS</span> <span class="pingCounter">? ms</span> <span id="onlineData"></span></p>
 			<canvas id="mainCanvas"></canvas>
 		</center>
 
