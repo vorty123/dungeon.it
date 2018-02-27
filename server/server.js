@@ -17,18 +17,80 @@ var io = require('socket.io').listen(8080);
 
 var stdin = process.openStdin();
 
-stdin.addListener("data", function(d) {
-		var cmd = d.toString().trim();
-
-		console.log("command: [" + cmd + "]");
-	});
-
 var clients = 0
 
 var rooms = {}
 var roomStructures = {}
 
+stdin.addListener("data", function(d) {
+		var cmdin = d.toString().trim();
 
+		console.log("command: [" + cmdin + "]");
+
+		cmd = cmdin.split(" ");
+
+		if(cmd[0] == "clients")
+		{
+			console.log("online clients: " + clients)
+		}
+		else if(cmd[0] == "genpickup")
+		{
+			if(cmd[1])
+			{
+				var room = cmdin.slice(10);
+
+				if(rooms[room])
+				{
+					for(var i=0; i<10; i++)
+					{
+						var x = randomBetween(1, 19);
+						var y = randomBetween(1, 19);
+						
+						if(!roomStructures[room].roomCollisions[x][y])
+						{
+							var rand = ""
+
+							switch(randomBetween(1, 3))
+							{
+								case 1:
+								rand = "snowflake";
+								break;
+
+								case 2:
+								rand = "cannonball";
+								break;
+
+								case 3:
+								rand = "hourglass";
+								break;
+							}
+
+							var id = createObject(room, rand, x, y);
+
+							roomStructures[room].roomCollisions[x][y] = "pickable";
+							roomStructures[room].pickables[x][y] = id;
+
+							io.to(room).emit("objectCreated", {id: rand, x: x, y: y})
+						}
+					}
+
+					console.log("generated pickups in room '" + room + "'")
+				}
+				else
+				{
+					console.log("room '" + room + "' not found")
+				}
+			}
+			else
+			{
+				console.log("use: '" + cmd[0] + " <room name>'")
+			}
+		}
+		else
+		{
+			console.log("unknown command '" + cmd[0] + "'")
+		}
+	});
 
 function randomBetween(min, max)
 {
@@ -147,21 +209,21 @@ function generateMap(room)
 		console.log("generate bite: dir2, " + sY + ", " + ySize)
 	}
 	
-	/* LÁDA */
+	/* CHEST */
 
 	var id = createObject(room, 24, 10, 10);
 	roomCollisions[10][10] = "pickable";
 	pickables[10][10] = id
 	
 
-	/* HORDÓK */
+	/* BARRIERS */
 	
-	var objs = randomBetween(10, 15)//+5000;
+	var objs = randomBetween(10, 13)//+5000;
 	
 	for(var i=0; i<objs; i++)
 	{
-		var x = randomBetween(1, 19);
-		var y = randomBetween(1, 19);
+		var x = randomBetween(1+1, 19-1);
+		var y = randomBetween(1+1, 19-1);
 		
 		if(!roomCollisions[x][y])
 		{
@@ -177,9 +239,9 @@ function generateMap(room)
 		}
 	}
 
-	/* POWERUPOK */
+	/* PICKUPS */
 
-	var objs = randomBetween(10, 15);
+	var objs = randomBetween(15, 20);
 	
 	for(var i=0; i<objs; i++)
 	{
@@ -220,6 +282,11 @@ function generateMap(room)
 		}
 	}
 
+	roomCollisions[1][1] = null;
+	roomCollisions[1][19] = null;
+	roomCollisions[19][19] = null;
+	roomCollisions[19][1] = null;
+
 	roomStructures[room].roomCollisions = roomCollisions;
 	roomStructures[room].pickables = pickables;
 }
@@ -239,6 +306,7 @@ function createRoom(roomName, players)
 		objects: [],
 		roomCollisions: [],
 		pickables: [],
+		timeouts: [],
 	}
 
 	generateMap(roomName)
@@ -269,7 +337,16 @@ function refreshRoomPlayers(room)
 	rooms[room].currentPlayers = getRoomUsersLength(room)
 
 	if(rooms[room].currentPlayers <= 0)
-	{
+	{	
+		if(roomStructures[room].timeouts[0])
+			clearTimeout(roomStructures[room].timeouts[0])
+
+		if(roomStructures[room].timeouts[1])			
+			clearTimeout(roomStructures[room].timeouts[1])
+
+		if(roomStructures[room].timeouts[2])			
+			clearTimeout(roomStructures[room].timeouts[2])
+
 		delete rooms[room];
 		delete roomStructures[room];
 		console.log("deleted room: " + room)
@@ -327,17 +404,18 @@ function killPlayer(id, by)
 
 function checkProjectileDeath(currentRoom, timer, id, obj)
 {
-	projectiles[id].x += projectiles[id].xdir
-	projectiles[id].y += projectiles[id].ydir
-
-	var deleteProjectile = false;
-
-	if(projectiles[id].x > 21 || projectiles[id].x < 0 || projectiles[id].y > 21 || projectiles[id].y < 0)
-		deleteProjectile = true;
-	else if (roomStructures[currentRoom].roomCollisions[projectiles[id].x] && roomStructures[currentRoom].roomCollisions[projectiles[id].x][projectiles[id].y] && roomStructures[currentRoom].roomCollisions[projectiles[id].x][projectiles[id].y] != "pickable")
-		deleteProjectile = true;
+	if(!rooms[currentRoom])
+	{
+		delete projectiles[id];
+		clearInterval(timer);
+	}
 	else
 	{
+		projectiles[id].x += projectiles[id].xdir
+		projectiles[id].y += projectiles[id].ydir
+
+		var deleteProjectile = false;
+
 		if(projectiles[id].obj == "cannonball")
 		{
 			var users = getRoomUsers(currentRoom);
@@ -352,12 +430,20 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 				}
 			}
 		}
-	}
 
-	if(deleteProjectile)
-	{
-		io.to(currentRoom).emit("deleteProjectile", id);
-		clearInterval(timer);
+		if(projectiles[id].x > 21 || projectiles[id].x < 0 || projectiles[id].y > 21 || projectiles[id].y < 0)
+			deleteProjectile = true;
+		else if (roomStructures[currentRoom].roomCollisions[projectiles[id].x] && roomStructures[currentRoom].roomCollisions[projectiles[id].x][projectiles[id].y] && roomStructures[currentRoom].roomCollisions[projectiles[id].x][projectiles[id].y] != "pickable")
+			deleteProjectile = true;
+
+		if(deleteProjectile)
+		{
+			io.to(currentRoom).emit("deleteProjectile", id);
+			
+			delete projectiles[id];
+
+			clearInterval(timer);
+		}
 	}
 }
 
@@ -365,7 +451,7 @@ function joinRoom(socket, data, currentRoom)
 {
 	var room = data.room
 
-	if(!currentRoom && rooms[room] && getRoomUsersLength(room) < rooms[room].neededPlayers && !rooms[room].started)
+	if(!currentRoom && rooms[room] && getRoomUsersLength(room) < rooms[room].neededPlayers && !rooms[room].started && !rooms[room].gameover && !rooms[room].cd)
 	{
 		currentRoom = room;
 	
@@ -446,10 +532,20 @@ function joinRoom(socket, data, currentRoom)
 
 			rooms[currentRoom].cd = true
 			io.to(currentRoom).emit("bigText", {text: false})
+
+			if(roomStructures[currentRoom].timeouts[0])
+				clearTimeout(roomStructures[currentRoom].timeouts[0])
+
+			if(roomStructures[currentRoom].timeouts[1])			
+				clearTimeout(roomStructures[currentRoom].timeouts[1])
+
+			if(roomStructures[currentRoom].timeouts[2])			
+				clearTimeout(roomStructures[currentRoom].timeouts[2])
+
 			
-			setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "READY!", time: 900, size: 1}) }, 2000)
-			setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "SET!", time: 900, size: 1}) }, 3000)
-			setTimeout(function () { 
+			roomStructures[currentRoom].timeouts[0] = setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "READY!", time: 900, size: 1}) }, 2000)
+			roomStructures[currentRoom].timeouts[1] = setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "SET!", time: 900, size: 1}) }, 3000)
+			roomStructures[currentRoom].timeouts[2] = setTimeout(function () { 
 				if(rooms[currentRoom])
 				{
 					io.to(currentRoom).emit("bigText", {text: "<font color='mediumseagreen'>GO!</font>", time: 1500, size: 2})
@@ -474,12 +570,13 @@ function joinRoom(socket, data, currentRoom)
 	}
 	else
 	{
-		if(rooms[room].started)
+		/*if(rooms[room].started)
 			socket.emit("chatMessage", "<font color='indianred'>Failed to join room '" + room + "'. (Game already started!)</font>")
 		else if(getRoomUsersLength(room) >= rooms[room].neededPlayers)
 			socket.emit("chatMessage", "<font color='indianred'>Failed to join room '" + room + "'. (Player limit reached!)</font>")
 		else
 			socket.emit("chatMessage", "<font color='indianred'>Failed to join room '" + room + "'.</font>")
+		*/
 
 		return false
 	}
@@ -505,28 +602,68 @@ io.on("connection", function(socket){
 		});
 
 	socket.on("putDownCarrying", 
-		function()
+		function(data)
 		{
 			if(currentRoom && rooms[currentRoom].started)
 			{
 				if(playerDatas[socket.id].carrying && (!roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x] || !roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y]))
 				{	
+					if(data.px != playerDatas[socket.id].x || data.py != playerDatas[socket.id].y)
+					{
+						if(Math.abs(data.px-playerDatas[socket.id].x) > 2 || Math.abs(data.py-playerDatas[socket.id].y) > 2)
+						{
+							io.to(currentRoom).emit("teleportCharacter", {soc: socket.id, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y})
+						}
+						else
+						{
+							playerDatas[socket.id].x = data.px;
+							playerDatas[socket.id].y = data.py;
+						}
+					}
+
 					if(playerDatas[socket.id].carrying == "cannonball" || playerDatas[socket.id].carrying == "snowflake")
 					{
-						projectile = {
-							x: playerDatas[socket.id].x,
-							y: playerDatas[socket.id].y,
-							obj: playerDatas[socket.id].carrying,
-							carrying: socket.id,
-							xdir: 1,
-							ydir: 0,
+						//TODO: ARGUMENT CHECK
+						if((Math.abs(data.x)+Math.abs(data.y)) == 1)
+						{
+							var xt = playerDatas[socket.id].x+data.x;
+							var yt = playerDatas[socket.id].y+data.y;
+
+							if(xt <= 19 && xt >= 1 && yt <= 19 && yt >= 1 && 
+								!(roomStructures[currentRoom].roomCollisions[xt] && roomStructures[currentRoom].roomCollisions[xt][yt] && roomStructures[currentRoom].roomCollisions[xt][yt] != "pickable")
+							)
+							{
+								var projectile = {
+									x: playerDatas[socket.id].x,
+									y: playerDatas[socket.id].y,
+									obj: playerDatas[socket.id].carrying,
+									carrying: socket.id,
+									xdir: data.x,
+									ydir: data.y,
+								}
+
+								var id = 0;
+
+								for(var i=0; i<=projectiles.length; i++)
+								{
+									if(!projectiles[i])
+									{
+										id = i;
+										break;
+									}
+								}
+
+								projectiles[id] = projectile
+
+								console.log(currentRoom + " created projectile with id: " + id)
+
+								io.to(currentRoom).emit("createProjectile", {id: id, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y, obj: playerDatas[socket.id].carrying, carrying: socket.id, xdir: data.x, ydir: data.y})
+
+								var timer = setInterval(function () { checkProjectileDeath(currentRoom, timer, id) }, 100)
+
+								playerDatas[socket.id].carrying = false
+							}
 						}
-
-						var id = projectiles.push(projectile) - 1;
-
-						io.to(currentRoom).emit("createProjectile", {id: id, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y, obj: playerDatas[socket.id].carrying, carrying: socket.id, xdir: 1, ydir: 0})
-
-						var timer = setInterval(function () { checkProjectileDeath(currentRoom, timer, id) }, 100)
 					}
 					else
 					{
@@ -535,9 +672,9 @@ io.on("connection", function(socket){
 						roomStructures[currentRoom].pickables[playerDatas[socket.id].x][playerDatas[socket.id].y] = id
 						
 						io.to(currentRoom).emit("objectCreated", {id: playerDatas[socket.id].carrying, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y, carrying: socket.id})
-					}
 
-					playerDatas[socket.id].carrying = false
+						playerDatas[socket.id].carrying = false
+					}
 				}
 			}
 		});
@@ -545,31 +682,32 @@ io.on("connection", function(socket){
 	socket.on("moveCharacter", 
 		function(direction)
 		{
+			//TODO: ARGUMENT CHECK!!
+
 			//console.log("mvchr1 " + playerDatas[socket.id].nextMove + ", " + getTickCount());
 			//console.log(playerDatas[socket.id].nextMove < getTickCount());
 			//console.log(currentRoom)
 			if(currentRoom && rooms[currentRoom].started && currentSpawnPoint >= 0 && playerDatas[socket.id] && playerDatas[socket.id].nextMove < getTickCount())
 			{
 				//console.log("mvchr2 " + playerDatas[socket.id].nextMove + ", " + getTickCount());
-				if(  (Math.abs(direction.x) == 0 || Math.abs(direction.x) == 1)
-				  && (Math.abs(direction.y) == 0 || Math.abs(direction.y) == 1))
 
+				if((Math.abs(direction.x)+Math.abs(direction.y)) == 1)
 				{
-					var x = playerDatas[socket.id].x
-					var y = playerDatas[socket.id].y
-
-					if(direction.px != x || direction.py != y)
+					if(direction.px != playerDatas[socket.id].x || direction.py != playerDatas[socket.id].y)
 					{
-						if(Math.abs(direction.px-x) > 2 || Math.abs(direction.py-y) > 2)
+						if(Math.abs(direction.px-playerDatas[socket.id].x) > 2 || Math.abs(direction.py-playerDatas[socket.id].y) > 2)
 						{
-							io.to(currentRoom).emit("teleportCharacter", {soc: socket.id, x: x, y: y})
+							io.to(currentRoom).emit("teleportCharacter", {soc: socket.id, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y})
 						}
 						else
 						{
-							x = direction.px;
-							y = direction.py;
+							playerDatas[socket.id].x = direction.px;
+							playerDatas[socket.id].y = direction.py;
 						}
 					}
+
+					var x = playerDatas[socket.id].x
+					var y = playerDatas[socket.id].y
 
 					x += direction.x
 					y += direction.y
@@ -596,6 +734,7 @@ io.on("connection", function(socket){
 	 					{
 	 						if(playerDatas[socket.id].carrying == 24)
 	 						{
+	 							rooms[currentRoom].gameover = "<font color='" + playerDatas[socket.id].color + "'>" + playerDatas[socket.id].name + "</font>";
 	 							rooms[currentRoom].started = false;
 
 	 							io.to(currentRoom).emit("bigText", {text: "Game over!<br><br>Winner: <font color='" + playerDatas[socket.id].color + "'>" + playerDatas[socket.id].name + "</font>", time: false, size: 0.5})
