@@ -33,14 +33,16 @@ socket.on("roomList",
 				$("#mainCanvas").hide()
 				$("#onlineData").html("")
 				$(".bigtext").html("")
-				$("#rooms").html("<table id='roomListTable'></table>")
-				
-				console.log(data)
+				$("#rooms").html("<table id='roomListTable'><tr><td style='text-align: center;'>Room name</td><td colspan='2'>Players</td></tr></table>")
+					
+				var count = 0;
 
 				for(var room in data)
 				{
 					if(data[room])
 					{
+						count ++;
+
 						console.log("got room: " + room)
 						var state = "";
 						
@@ -53,9 +55,14 @@ socket.on("roomList",
 						else
 							state = "<button type='button' class='joinRoom' id='" + room + "'>Join room</button>";
 
-						$("#roomListTable").append("<tr><td>" + room + "</td><td>" + data[room].currentPlayers + "/" + data[room].neededPlayers + "</td><td>" + state + "</td></tr>");
+						$("#roomListTable").append("<tr><td>" + room + "</td><td>" + data[room].currentPlayers + "/" + data[room].neededPlayers + "</td><td style='text-align: center;'>" + state + "</td></tr>");
 					}
 				}
+
+				console.log("rooms: " + count);
+
+				if(count <= 0)
+					$("#roomListTable").append("<tr><td style='text-align: center; line-height: 1.75;' colspan='3'>There are no rooms.<br>Let's create one!</td></tr>");
 			}
 		}
 	);
