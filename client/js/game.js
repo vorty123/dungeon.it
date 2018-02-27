@@ -1,4 +1,4 @@
-var socket = io("http://127.0.0.1:8080");
+var socket = io("http://server.getthechest.com:8080");
 //var socket = io("http://192.168.1.7:8080");
 
 var stage;
@@ -18,6 +18,12 @@ var collisions = []
 
 var inGame = false;
 
+$("#settings").hide();
+$("#rooms").hide();
+$("#mainCanvas").hide()
+$("#onlineData").html("")
+$(".bigtext").html("")
+
 socket.on("roomList", 
 		function(data){
 			if(!inGame)
@@ -25,22 +31,45 @@ socket.on("roomList",
 				$("#settings").show()
 				$("#rooms").show()
 				$("#mainCanvas").hide()
-				$("#rooms").html("<br>")
+				$("#onlineData").html("")
+				$(".bigtext").html("")
+				$("#rooms").html("<br><br><br>")
 				
+				console.log(data)
+
 				for(var room in data)
 				{
-					console.log("got room: " + room)
-					$("#rooms").append(room + " " + data[room].currentPlayers + "/" + data[room].neededPlayers + " ");
-					$("<a class='joinRoom' id='" + room + "' href='#'>Belépés</a>").appendTo("#rooms");
+					if(data[room])
+					{
+						console.log("got room: " + room)
+						$("#rooms").append(room + " " + data[room].currentPlayers + "/" + data[room].neededPlayers + " ");
+						
+						if(data[room].started)
+							$("#rooms").append("<i>already started</i><br><br>")
+						else if(data[room].currentPlayers >= data[room].neededPlayers)
+							$("#rooms").append("<i>room full</i><br><br>")
+						else
+							$("<button type='button' class='joinRoom' id='" + room + "'>Join room</button><br><br>").appendTo("#rooms");
+					}
 				}
 			}
 		}
 	);
 	
+//TODO: doesn't allow empty name for player and room & char limit
+$("#createRoom").click(function() {
+	socket.emit("createRoom", {name: $("#roomName").val(), num: $("#roomMaxPlayers").val(), player: $("#name").val()})
+});
 
-$("#rooms").on("click", "a.joinRoom",
+$("#rooms").on("click", "button.joinRoom",
 	function (event){
 		socket.emit("joinRoom", {room: $(this).attr("id"), name: $("#name").val()})
+		event.preventDefault();
+	});
+
+$(".bigtext").on("click", "button.leaveRoom",
+	function (event){
+		socket.emit("leaveRoom")
 		event.preventDefault();
 	});
 
@@ -75,60 +104,91 @@ $("body").keyup(
 		}
 	});
 
+var started = false
+
+socket.on("gameStarted", 
+	function (data){
+		started = data;
+	});
+
 $("body").keydown(
 	function (event){
 		var key = event.which;
 
-		if(keyDown == 0 && getTickCount()  > nextMove)
+		if($("#message").is(':focus'))
 		{
-			console.log("key event: " + key)
-			
-			if(key == 32)
+			if(key == 13)
 			{
-				if(players[playersBySocket[socket.id]][6])
-				{
-					socket.emit("putDownCarrying")
-					keyDown = key
-					extMove = getTickCount()+240;
-					event.preventDefault();
-				}
+				socket.emit("writeChat", $("#message").val())
+				$("#message").val("");
+				$("#message").blur();
 			}
-			else if(key == 87 || key ==  38)
+			else if(key == 27)
 			{
-				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
-				handleMove({soc: socket.id, direction: {x: 0, y: -1}}); //"up")
-				nextMove = getTickCount()+240;
-				keyDown = key
-				event.preventDefault();
-			}
-			else if(key == 83 || key ==  40)
-			{
-				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
-				handleMove({soc: socket.id, direction: {x: 0, y: 1}}); //"down")
-				nextMove = getTickCount()+240;
-				keyDown = key
-				event.preventDefault();
-			}
-			else if(key == 65 || key ==  37)
-			{
-				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
-				handleMove({soc: socket.id, direction: {x: -1, y: 0}}); //"left")
-				nextMove = getTickCount()+240;
-				keyDown = key
-				event.preventDefault();
-			}
-			else if(key == 68 || key ==  39)
-			{
-				socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
-				handleMove({soc: socket.id, direction: {x: 1, y: 0}}); //"right")
-				nextMove = getTickCount()+240;
-				keyDown = key
-				event.preventDefault();
+				$("#message").val("");
+				$("#message").blur();
 			}
 		}
 		else
 		{
-			event.preventDefault();
+			if(inGame && (key == 13 || key == 89 || key == 84))
+			{
+				$("#message").focus();
+			}
+			else if(keyDown == 0 && getTickCount()  > nextMove)
+			{
+				console.log("key event: " + key)
+				
+				if(started)
+				{
+					if(key == 32)
+					{
+						if(players[playersBySocket[socket.id]][6])
+						{
+							socket.emit("putDownCarrying")
+							keyDown = key
+							extMove = getTickCount()+240;
+							event.preventDefault();
+						}
+					}
+					else if(key == 87 || key ==  38)
+					{
+						socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
+						handleMove({soc: socket.id, direction: {x: 0, y: -1}}); //"up")
+						nextMove = getTickCount()+240;
+						keyDown = key
+						event.preventDefault();
+					}
+					else if(key == 83 || key ==  40)
+					{
+						socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
+						handleMove({soc: socket.id, direction: {x: 0, y: 1}}); //"down")
+						nextMove = getTickCount()+240;
+						keyDown = key
+						event.preventDefault();
+					}
+					else if(key == 65 || key ==  37)
+					{
+						socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
+						handleMove({soc: socket.id, direction: {x: -1, y: 0}}); //"left")
+						nextMove = getTickCount()+240;
+						keyDown = key
+						event.preventDefault();
+					}
+					else if(key == 68 || key ==  39)
+					{
+						socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
+						handleMove({soc: socket.id, direction: {x: 1, y: 0}}); //"right")
+						nextMove = getTickCount()+240;
+						keyDown = key
+						event.preventDefault();
+					}
+				}
+			}
+			else
+			{
+				event.preventDefault();
+			}
 		}
 	});
 
@@ -144,6 +204,8 @@ function resizeCanvas()
 	if(!inGame)
 	{
 		$("#mainCanvas").hide()
+		$("#onlineData").html("")
+		$(".bigtext").html("")
 	}
 }
 
@@ -164,7 +226,12 @@ function init()
 	queue.on("fileload", handleFileLoad, this);
 
 	queue.loadFile({id:"levelbase", src:"img/levelbase.png"});
-	queue.loadFile({id:"player_sheet", src:"img/player_sheet.png"});
+
+	queue.loadFile({id:"player_sheet_blue", src:"img/player_sheet_blue.png"});
+	queue.loadFile({id:"player_sheet_red", src:"img/player_sheet_red.png"});
+	queue.loadFile({id:"player_sheet_green", src:"img/player_sheet_green.png"});
+	queue.loadFile({id:"player_sheet_yellow", src:"img/player_sheet_yellow.png"});
+
 	queue.loadFile({id:"hourglass_sheet", src:"img/hourglass_sheet.png"});
 	
 	queue.loadFile({id:"bitmap:cannonball", src:"img/cannonball.png"});
@@ -174,7 +241,10 @@ function init()
 }
 
 var levelBaseSheet;
-var playerSheet;
+var playerSheet_blue;
+var playerSheet_red;
+var playerSheet_green;
+var playerSheet_yellow;
 var hourglassSheet;
 
 function handleFileLoad(event)
@@ -188,17 +258,68 @@ function handleFileLoad(event)
 		});
 		console.log("base sheet loaded")
 	}
-	else if(event.item.id == "player_sheet")
+	else if(event.item.id == "player_sheet_green")
 	{
-		playerSheet = new createjs.SpriteSheet({
+		playerSheet_green = new createjs.SpriteSheet({
 			images: [event.result], 
 			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
 			animations: {
-				idle: [4, 7, true, 0.05],
+				idle: [4, 7, true, 0.075],
 				jump1: [0, 1, false, 0.125],
 				jump2: [2, 3, "idle", 0.125],
 
-				idle_carrying: [4+8, 7+8, true, 0.05],
+				idle_carrying: [4+8, 7+8, true, 0.075],
+				jump1_carrying: [0+8, 1+8, false, 0.125],
+				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
+			}
+		});
+		console.log("player sheet loaded")
+	}
+	else if(event.item.id == "player_sheet_red")
+	{
+		playerSheet_red = new createjs.SpriteSheet({
+			images: [event.result], 
+			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
+			animations: {
+				idle: [4, 7, true, 0.075],
+				jump1: [0, 1, false, 0.125],
+				jump2: [2, 3, "idle", 0.125],
+
+				idle_carrying: [4+8, 7+8, true, 0.075],
+				jump1_carrying: [0+8, 1+8, false, 0.125],
+				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
+			}
+		});
+		console.log("player sheet loaded")
+	}
+	else if(event.item.id == "player_sheet_blue")
+	{
+		playerSheet_blue = new createjs.SpriteSheet({
+			images: [event.result], 
+			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
+			animations: {
+				idle: [4, 7, true, 0.075],
+				jump1: [0, 1, false, 0.125],
+				jump2: [2, 3, "idle", 0.125],
+
+				idle_carrying: [4+8, 7+8, true, 0.075],
+				jump1_carrying: [0+8, 1+8, false, 0.125],
+				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
+			}
+		});
+		console.log("player sheet loaded")
+	}
+	else if(event.item.id == "player_sheet_yellow")
+	{
+		playerSheet_yellow = new createjs.SpriteSheet({
+			images: [event.result], 
+			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
+			animations: {
+				idle: [4, 7, true, 0.075],
+				jump1: [0, 1, false, 0.125],
+				jump2: [2, 3, "idle", 0.125],
+
+				idle_carrying: [4+8, 7+8, true, 0.075],
 				jump1_carrying: [0+8, 1+8, false, 0.125],
 				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
 			}
@@ -375,11 +496,21 @@ function createPlayer(id, x, y, socket, name, color)
 {
 	players[id] = []
 	
-	players[id][0] = new createjs.Sprite(playerSheet, "idle");
+	var sheet = playerSheet_green
+
+	if(color == "darkcyan")
+		sheet = playerSheet_blue
+	else if(color == "indianred")
+		sheet = playerSheet_red
+	else if(color == "gold")
+		sheet = playerSheet_yellow
+
+
+	players[id][0] = new createjs.Sprite(sheet, "idle");
 	
 	
-	var w = playerSheet.getFrameBounds(0).width;
-	var h = playerSheet.getFrameBounds(0).height;
+	var w = sheet.getFrameBounds(0).width;
+	var h = sheet.getFrameBounds(0).height;
 	
 	players[id][0].regX = Math.floor(w/2);
 
@@ -484,7 +615,7 @@ function resetTiles(add)
 
 				var rand = randomBetween(1, 85)
 
-				console.log(rand)
+				//console.log(rand)
 
 				if(rand >= 1 && rand <= 4)
 				{
@@ -513,7 +644,7 @@ function resetTiles(add)
 	createdObjects = []
 	objects = [...Array(xSize).keys()].map(i => Array(ySize))
 
-	for(var id=0; id<playersNum; id++)
+	for(var id in players)
 	{
 		stage.removeChild(players[id][0]);
 		stage.removeChild(players[id][1]);
@@ -598,6 +729,8 @@ function putPlayerInCarry(id, obj)
 
 socket.on("sendRoomStructure", 
 	function(data){
+		started = false
+
 		$("#settings").hide();
 		$("#rooms").hide();
 		$("#mainCanvas").show();
@@ -626,7 +759,7 @@ socket.on("sendRoomStructure",
 
 		playersNum = 0;
 
-		for(var i=0; i<4; i++)
+		for(var i in data.players)
 		{
 			if(data.players[i])
 			{
@@ -636,9 +769,17 @@ socket.on("sendRoomStructure",
 				if(data.players[i].carrying)
 					putPlayerInCarry(id, data.players[i].carrying)
 
+				if(data.players[i].soc == socket.id)
+				{
+					$("#onlineData").html(data.name + "/<font color='" + data.players[i].color + "'>" + data.players[i].name + "</font>");
+				}
+
 				playersNum ++;
 			}
 		}
+
+		$(".bigtext").css("font-size", "100%");
+		$(".bigtext").html("Waiting for players...<br><br><button type='button' class='leaveRoom' style='width: 50%; margin: 0 auto;'>Back to menu</button>")
 	});
 
 var projectiles = []
@@ -646,7 +787,7 @@ var projectiles = []
 socket.on("deleteProjectile", 
 	function(data) {
 		stage.removeChild(projectiles[data][0]);
-		projectiles[data] = null;
+		delete projectiles[data];
 	});
 
 socket.on("createProjectile", 
@@ -674,6 +815,7 @@ socket.on("createProjectile",
 		}
 	});
 
+
 socket.on("pickUpObject", 
 	function(data){
 		var x = data.x;
@@ -681,7 +823,7 @@ socket.on("pickUpObject",
 
 		stage.removeChild(objects[x][y][0]);
 		console.log("delete object: " + objects[x][y][5])
-		createdObjects[objects[x][y][5]] = null;
+		delete createdObjects[objects[x][y][5]];
 		objects[x][y] = null;
 
 		if(data.soc)
@@ -691,10 +833,109 @@ socket.on("pickUpObject",
 		}
 	});
 
+socket.on('connect', 
+	function() {
+		inGame = false;
+		started = false;
+		
+		$("#settings").show();
+		$("#rooms").show();
+		$("#mainCanvas").hide()
+		$("#onlineData").html("")
+		$(".bigtext").html("")
+
+
+		$("#chat").append("<li style='color: mediumseagreen;'>Successfully connected to server!</li>");
+		$("#chat").animate({ scrollTop: $(document).height() }, 400);
+	});
+
+socket.on('leavedRoom', 
+	function() {
+		inGame = false;
+		started = false;
+
+		$("#settings").hide();
+		$("#rooms").hide();
+		$("#mainCanvas").hide()
+		$("#onlineData").html("")
+		$(".bigtext").html("")
+
+		$("#chat").append("<li style='color: indianred;'>Leaved room</li>");
+		$("#chat").animate({ scrollTop: $(document).height() }, 400);
+	});
+
+socket.on('disconnect', 
+	function() {
+		inGame = false;
+		started = false;
+
+		$("#settings").hide();
+		$("#rooms").hide();
+		$("#mainCanvas").hide()
+		$("#onlineData").html("")
+		$(".bigtext").html("")
+
+		$("#chat").append("<li style='color: indianred;'>Connection to the server was lost!</li>");
+		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
+		$("#chat").animate({ scrollTop: $(document).height() }, 400);
+	});
+
+socket.on('connect_error', 
+	function() {
+		inGame = false;
+		started = false;
+		
+		$("#settings").hide();
+		$("#rooms").hide();
+		$("#mainCanvas").hide()
+		$("#onlineData").html("")
+		$(".bigtext").html("")
+
+		$("#chat").append("<li style='color: indianred;'>Failed to connect to server!</li>");
+		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
+		$("#chat").animate({ scrollTop: $(document).height() }, 400);
+	});
+
+var tmo = false;
+
+socket.on("bigText", 
+	function(data) {
+		if(tmo)
+			clearTimeout(tmo);
+
+		tmo = false;
+
+		if(data.text)
+		{
+			$(".bigtext").html(data.text);
+			$(".bigtext").css("font-size", (400*data.size)+"%");
+
+			if(data.time)
+			{
+				$(".bigtext").animate({ "font-size": (200*data.size)+"%" }, data.time);
+				tmo = setTimeout(function () { $(".bigtext").html(""); tmo = false; }, data.time)
+			}
+			else
+			{
+			   $(".bigtext").append("<br><button type='button' class='leaveRoom' style='width: 50%; margin: 0 auto;'>Back to menu</button>")
+			}
+		}
+		else
+		{
+			$(".bigtext").html("");
+		}
+	});
+
+socket.on("chatMessage", 
+	function(data) {
+		$("#chat").append("<li>" + data + "</li>");
+		$("#chat").animate({ scrollTop: $(document).height() }, 400);
+	});
+
 socket.on("destroyPlayer", 
 	function(data){
 		var id = playersBySocket[data]
-		playersBySocket[data] = null
+		delete playersBySocket[data];
 
 		stage.removeChild(players[id][0]);
 		stage.removeChild(players[id][1]);
@@ -703,14 +944,14 @@ socket.on("destroyPlayer",
 		if(players[id][6])
 			stage.removeChild(players[id][6]);
 
-		players[id] = null
+		delete players[id];
 	});
 
 socket.on("createPlayer", 
 	function(data){
 		var freePlayer = 0;
 		
-		for(var id=0; id<playersNum+1; id++)
+		for(var id=0; id<=players.length; id++)
 		{
 			if(!players[id])
 			{
@@ -718,6 +959,8 @@ socket.on("createPlayer",
 				break;
 			}
 		}
+
+		console.log("create player: " + freePlayer)
 
 		var id = createPlayer(freePlayer, data.x, data.y, data.soc, data.name, data.color);
 
@@ -953,7 +1196,7 @@ setInterval(
 		});
 
 		
-	}, 150)
+	}, 500)
 	
 
 /*setInterval(

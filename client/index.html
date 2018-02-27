@@ -42,9 +42,62 @@
 				display:block;
 			}
 
+			#chat {
+				overflow-y: scroll;
+				display: block;
+				position: absolute;
+				top: 5%;
+				width: 23%;
+				height: 47%;
+				text-align: left;
+				font-size: 70%;
+				list-style-type: none;
+				padding-left: 10px;
+			}
+
+			#chat > li {
+				margin-bottom: 8px;
+    			line-height: 1.5;
+			}
+
+			#message {
+				position: absolute;
+				top: 55%;
+				left: 10px;
+				width: 23%;
+			}
+
 			.fpsCounterHolder {
 				position: absolute;
+				font-size: 70%;
+				padding-left: 5px;
 				top: 0;
+			}
+
+			.joinRoom {
+				text-decoration: none;
+			}
+
+			input, button, select {
+				font-family: 'Press Start 2P', cursive;
+				font-size: 85%;
+			}
+
+			.bigtext {
+				height: 200px;
+				width: 600px;
+				/*background: black;*/
+
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				margin-top: -100px;
+				margin-left: -300px;
+
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				text-align: center;
 			}
 		</style>
 	</head>
@@ -53,11 +106,30 @@
 			<div id="settings">
 				<br>
 				Name: <input type="text" id="name" value="name">
+				<br><br>
+				Create room: <input type="text" id="roomName" value="room name"> 
+				<select id="roomMaxPlayers">
+					<option>2</option>
+					<option>3</option>
+					<option>4</option>
+				</select>
+				<button type="button" id="createRoom">Create</button>
 			</div>
 			<div id="rooms">
 			</div>
-			<p class="fpsCounterHolder"><span class="fpsCounter">? FPS</span> <span class="pingCounter">? ms</span></p>
+			<ul id="chat">
+				<li>Welcome to getthechest.com!</li>
+			</ul>
+			<input type="text" id="message" placeholder="message">
+
+			<p class="fpsCounterHolder"><span class="fpsCounter">? FPS</span> <span class="pingCounter">? ms</span> <span id="onlineData"></span></p>
+
+
+
 			<canvas id="mainCanvas"></canvas>
+
+			<div class="bigtext">
+			</div>
 		</center>
 
 		<script src="js/game.js"></script>
