@@ -51,10 +51,23 @@
 				display: block;
 				position: absolute;
 				top: 5%;
-				width: 23%;
+				width: 20%;
 				height: 67%;
 				text-align: left;
 				font-size: 70%;
+				list-style-type: none;
+				padding-left: 10px;
+			}
+
+			#rightside {
+				position: absolute;
+				
+				top: 5%;
+				right: 0;
+
+				width: 20%;
+				height: 67%;
+				text-align: left;
 				list-style-type: none;
 				padding-left: 10px;
 			}
@@ -68,7 +81,7 @@
 				position: absolute;
 				top: 75%;
 				left: 10px;
-				width: 23%;
+				width: 20%;
 			}
 
 			.fpsCounterHolder {
@@ -139,7 +152,7 @@
 				<br>
 				Name: <input type="text" id="name" maxlength="16" size="16" value="name">
 				<br><br>
-				Create room: <input type="text" id="roomName" maxlength="32" size="32" value="room name"> 
+				Create room: <input type="text" id="roomName" maxlength="32" size="20" value="room name"> 
 				<select id="roomMaxPlayers">
 					<option>2</option>
 					<option>3</option>
@@ -160,9 +173,42 @@
 
 			<canvas id="mainCanvas"></canvas>
 
+			<div id="rightside" style="line-height: 1.75;">
+				<button type="button" style="margin-bottom: 5px;" id="muteSound">Mute sound</button><br>
+				<button type="button" style="margin-bottom: 5px;" id="muteMusic">Mute music</button><br>
+
+				<br>
+				<font color="gold">Controls:</font><br>
+
+				<i style="display: block; margin-top: 10px; padding-left: 5px;">Movement:</i>
+				<font style="display: inline-block; padding-left: 10px;" color="darkcyan">[W A S D]</font> Move<br>
+
+				<i style="display: block; margin-top: 10px; padding-left: 5px;">Projectiles:</i>
+				<font style="display: inline-block; padding-left: 10px;" color="darkcyan">[SPACE]</font> Aim<br>
+				<font style="display: inline-block; padding-left: 10px;" color="darkcyan">[ARROW KEYS]</font> Shoot<br>
+
+				<i style="display: block; margin-top: 10px; padding-left: 5px;">Other:</i>
+				<font style="display: inline-block; padding-left: 10px;" color="darkcyan">[ENTER]</font> Use chat<br>
+			
+				<br>
+				<font color="gold">About the game:</font><br>
+				<div style="padding-left: 10px; margin-top: 10px;">
+					The goal is to move the <font color="gold">chest</font> to your spawn point.
+				</div>
+				<br>
+				<div style="font-size: 60%; text-align: right; padding-right: 10px;">
+					Copyright &copy; 2018, getthechest.com<br>
+				</div> 
+				<div style="font-size: 50%; text-align: right; margin-top: 10px; padding-right: 10px;">
+					Using: socket.io, CreateJS, jQuery, Press Start 2P font, js-cookie
+				</div> 
+			</div>
+
 			<div class="bigtext">
 			</div>
 		</center>
+
+		<a href="https://github.com/vorty123/getthechest.com"><img style="max-width: 15%; position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/52760788cde945287fbb584134c4cbc2bc36f904/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f77686974655f6666666666662e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_white_ffffff.png"></a>
 
 		<script src="js/game.js"></script>
 	</body>

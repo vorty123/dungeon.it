@@ -4,6 +4,14 @@ var socket = io("http://server.getthechest.com:8080");
 var stage;
 var queue;
 
+var soundMuted = false;
+
+function playSound(sound)
+{
+	if(soundMuted)
+		createjs.Sound.play(sound);
+}
+
 var xSize = 21
 var ySize = 21
 
@@ -67,6 +75,21 @@ socket.on("roomList",
 		}
 	);
 	
+$("#muteSound").click(function() {
+	if(!soundMuted)
+	{
+		soundMuted = true;
+		Cookies.set("soundMuted", true);
+		$("#muteSound").html("Unmute sound");
+	}
+	else
+	{
+		soundMuted = false;
+		Cookies.remove("soundMuted");
+		$("#muteSound").html("Mute sound");
+	}
+});
+
 //TODO: doesn't allow empty name for player and room & char limit
 $("#createRoom").click(function() {
 	socket.emit("createRoom", {name: $("#roomName").val(), num: $("#roomMaxPlayers").val(), player: $("#name").val()})
@@ -340,7 +363,7 @@ $("body").keydown(
 								stage.removeChild(arrows[1]);
 								stage.removeChild(arrows[2]);
 								stage.removeChild(arrows[3]);
-								
+
 								movementKeys(event, key, aiming);
 								event.preventDefault();
 							}
@@ -362,7 +385,7 @@ $("body").keydown(
 
 function resizeCanvas()
 {
-	var h = Math.min(window.innerHeight, window.innerWidth);
+	var h = Math.min(window.innerHeight, window.innerWidth*0.6); //60% = 100%-20%*2(left and right side)
 	
 	h = Math.floor(h/32)*32
 	
@@ -411,6 +434,17 @@ function init()
 	createjs.Sound.registerSound("sounds/hit.wav", "hit");
 	createjs.Sound.registerSound("sounds/jump.wav", "jump");
 	createjs.Sound.registerSound("sounds/pickup.wav", "pickup");
+
+	if(Cookies.get("soundMuted"))
+	{
+		soundMuted = true;
+		$("#muteSound").html("Unmute sound");
+	}
+	else
+	{
+		soundMuted = false;
+		$("#muteSound").html("Mute sound");
+	}
 
 	if(Cookies.get("name"))
 		$("#name").val(Cookies.get("name"))
@@ -1026,7 +1060,7 @@ socket.on("deleteProjectile",
 		delete projectiles[data.id];
 
 		if(!data.outOfRange)
-			createjs.Sound.play("hit");
+			playSound("hit");
 	});
 
 socket.on("createProjectile", 
@@ -1069,7 +1103,7 @@ socket.on("pickUpObject",
 		{
 			var id = playersBySocket[data.soc];
 			putPlayerInCarry(id, data.obj);
-			createjs.Sound.play("pickup");
+			playSound("pickup");
 		}
 	});
 
@@ -1146,7 +1180,7 @@ socket.on("bigText",
 		tmo = false;
 
 		if(data.sound)
-			createjs.Sound.play("countdown");
+			playSound("countdown");
 
 		if(data.text)
 		{
@@ -1230,7 +1264,7 @@ function handleMove(data)
 	var id = playersBySocket[data.soc];
 
 	if(data.soc == socket.id)
-		createjs.Sound.play("jump");
+		playSound("jump");
 
 	if(data.x)
 	{
