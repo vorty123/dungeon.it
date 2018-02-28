@@ -431,14 +431,19 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 			}
 		}
 
+		var oor = false
+
 		if(projectiles[id].x > 21 || projectiles[id].x < 0 || projectiles[id].y > 21 || projectiles[id].y < 0)
+		{
 			deleteProjectile = true;
+			oor = true;
+		}
 		else if (roomStructures[currentRoom].roomCollisions[projectiles[id].x] && roomStructures[currentRoom].roomCollisions[projectiles[id].x][projectiles[id].y] && roomStructures[currentRoom].roomCollisions[projectiles[id].x][projectiles[id].y] != "pickable")
 			deleteProjectile = true;
 
 		if(deleteProjectile)
 		{
-			io.to(currentRoom).emit("deleteProjectile", id);
+			io.to(currentRoom).emit("deleteProjectile", {id: id, outOfRange: oor});
 			
 			delete projectiles[id];
 
@@ -543,12 +548,12 @@ function joinRoom(socket, data, currentRoom)
 				clearTimeout(roomStructures[currentRoom].timeouts[2])
 
 			
-			roomStructures[currentRoom].timeouts[0] = setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "READY!", time: 900, size: 1}) }, 2000)
-			roomStructures[currentRoom].timeouts[1] = setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "SET!", time: 900, size: 1}) }, 3000)
+			roomStructures[currentRoom].timeouts[0] = setTimeout(function () { io.to(currentRoom).emit("bigText", {sound: true, text: "READY!", time: 900, size: 1}) }, 2000)
+			roomStructures[currentRoom].timeouts[1] = setTimeout(function () { io.to(currentRoom).emit("bigText", {sound: true, text: "SET!", time: 900, size: 1}) }, 3000)
 			roomStructures[currentRoom].timeouts[2] = setTimeout(function () { 
 				if(rooms[currentRoom])
 				{
-					io.to(currentRoom).emit("bigText", {text: "<font color='mediumseagreen'>GO!</font>", time: 1500, size: 2})
+					io.to(currentRoom).emit("bigText", {sound: true, text: "<font color='mediumseagreen'>GO!</font>", time: 1500, size: 2})
 					io.to(currentRoom).emit("chatMessage",  "Game <font color='mediumseagreen'>started</font>!")
 					io.to(currentRoom).emit("gameStarted", true)
 
@@ -816,10 +821,10 @@ io.on("connection", function(socket){
 		function(){
 			if(currentRoom && !rooms[currentRoom].started && !rooms[currentRoom].cd)
 			{
-				console.log("user " + socket.id + " leaved room " + currentRoom)
+				console.log("user " + socket.id + " left room " + currentRoom)
 				rooms[currentRoom].spawnPoints[currentSpawnPoint] = false
 
-				socket.emit("leavedRoom")
+				socket.emit("leftRoom")
 
 				socket.leave(currentRoom)
 
