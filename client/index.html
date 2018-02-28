@@ -14,135 +14,7 @@
 
 		<meta charset="UTF-8">
 
-		<style>
-			html {
-				height: 100%;
-				padding: 0;
-			}
-			body {
-				font-family: 'Press Start 2P', cursive;
-				font-size: 75%;
-
-				height: 100%;
-				margin: 0;
-
-				background: rgba(0,0,0,1);
-				background: -moz-linear-gradient(top, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
-				background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(0,0,0,1)), color-stop(51%, rgba(14,14,20,1)), color-stop(100%, rgba(0,0,0,1)));
-				background: -webkit-linear-gradient(top, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
-				background: -o-linear-gradient(top, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
-				background: -ms-linear-gradient(top, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
-				background: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(14,14,20,1) 51%, rgba(0,0,0,1) 100%);
-				filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#000000', endColorstr='#000000', GradientType=0 );
-
-
-				color: #fff;
-			}
-
-			#mainCanvas {
-				image-rendering: pixelated;
-				display:block;
-			}
-
-			#chat {
-				word-wrap: break-word;
-				overflow-x: hidden;
-				overflow-y: scroll;
-				display: block;
-				position: absolute;
-				top: 5%;
-				width: 20%;
-				height: 67%;
-				text-align: left;
-				font-size: 70%;
-				list-style-type: none;
-				padding-left: 10px;
-			}
-
-			#rightside {
-				position: absolute;
-				
-				top: 5%;
-				right: 0;
-
-				width: 20%;
-				height: 67%;
-				text-align: left;
-				list-style-type: none;
-				padding-left: 10px;
-			}
-
-			#chat > li {
-				margin-bottom: 8px;
-    			line-height: 1.5;
-			}
-
-			#message {
-				position: absolute;
-				top: 75%;
-				left: 10px;
-				width: 20%;
-			}
-
-			.fpsCounterHolder {
-				position: absolute;
-				font-size: 70%;
-				padding-left: 5px;
-				top: 0;
-			}
-
-			.joinRoom {
-				text-decoration: none;
-			}
-
-			input, button, select {
-				font-family: 'Press Start 2P', cursive;
-				font-size: 85%;
-			}
-
-			.bigtext {
-				height: 200px;
-				width: 600px;
-				/*background: black;*/
-
-				position: fixed;
-				top: 50%;
-				left: 50%;
-				margin-top: -100px;
-				margin-left: -300px;
-
-				display: flex;
-				flex-direction: column;
-				justify-content: center;
-				text-align: center;
-			}
-
-			#roomListTable {
-				margin-top: 20px;
-				border-collapse: collapse;
-			}
-
-			#roomListTable td {
-				margin: 0;
-				padding: 15px 10px;
-			}
-
-			#roomListTable tr {
-				border-bottom: 1px #fff solid;
-			}
-
-			#roomListTable tr:last-child {		
-				border: none;
-			}
-
-			#roomListTable tr:first-child {		
-				border: none;
-			}
-
-			#roomListTable tr:first-child td {	
-				padding-bottom: 10px;
-			}
-		</style>
+		<link rel="stylesheet" href="style.css">
 	</head>
 	<body onload="init();">
 		<center>
@@ -173,7 +45,7 @@
 
 			<canvas id="mainCanvas"></canvas>
 
-			<div id="rightside" style="line-height: 1.75;">
+			<div id="rightside">
 				<button type="button" style="margin-bottom: 5px;" id="muteSound">Mute sound</button><br>
 				<button type="button" style="margin-bottom: 5px;" id="muteMusic">Mute music</button><br>
 
@@ -195,6 +67,8 @@
 				<div style="padding-left: 10px; margin-top: 10px;">
 					The goal is to move the <font color="gold">chest</font> to your spawn point.
 				</div>
+				<br>
+				<a style="text-align: center; width: 100%; display:block;" href="manual.html">User manual</a>
 				<br>
 				<div style="font-size: 60%; text-align: right; padding-right: 10px;">
 					Copyright &copy; 2018, getthechest.com<br>

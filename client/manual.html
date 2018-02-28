@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>GetTheChest.com</title>
+
+		<script src="http://code.jquery.com/jquery-2.2.4.min.js"></script>
+	
+		<link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+
+		<meta charset="UTF-8">
+
+		<link rel="stylesheet" href="style.css">
+	</head>
+	<body onload="init();">
+		<center style="line-height: 1.75;">
+			<span style="font-size:300%; display: block; margin: 15px auto;">GetThe<font color="gold">Chest</font>.com</span>
+			<span style="font-size:200%; display: block; margin: 15px auto;">User manual</span>
+			
+			<font color="gold">Controls:</font><br>
+
+			<i style="display: block; margin-top: 10px;">Movement:</i>
+			<font color="darkcyan">[W A S D]</font> Move<br>
+
+			<i style="display: block; margin-top: 10px;">Projectiles:</i>
+			<font color="darkcyan">[SPACE]</font> Aim<br>
+			<font color="darkcyan">[ARROW KEYS]</font> Shoot<br>
+
+			<i style="display: block; margin-top: 10px;">Other:</i>
+			<font color="darkcyan">[ENTER]</font> Use chat<br>
+		
+			<br>
+			<font color="gold">About the game:</font><br>
+			<div style="padding-left: 10px; margin-top: 10px;">
+				The goal is to move the <font color="gold">chest</font> to your spawn point.
+			</div>
+
+			<br>
+			<font color="gold">Game elements:</font><br>
+
+			<table style="margin-top: 10px;">
+				<tr>
+					<td style="padding-right: 10px;">Chest:</td><td>
+					<div style="display: inline-block; width: 32px; height: 32px; background: url('img/levelbase.png'); background-position-x: -192px; background-position-y: -64px;"></div></td>
+				</tr>
+			</table>
+
+			<i style="display: block; margin-top: 10px;">Players & spawn points:</i>
+
+			<table style="margin-top: 10px;">
+				<tr>
+					<td style="padding-right: 10px;"><font color="mediumseagreen">Green:</font></td><td>
+					<div style="display: inline-block; width: 24px; height: 32px; background: url('img/player_sheet_green.png');"></div>
+					<div style="display: inline-block; width: 32px; height: 32px; background: url('img/levelbase.png'); background-position-x: -160px; background-position-y: -96px;"></div></td>
+				</tr>
+				<tr>
+					<td style="padding-right: 10px;"><font color="darkcyan">Blue:</font></td><td>
+					<div style="display: inline-block; width: 24px; height: 32px; background: url('img/player_sheet_blue.png');"></div>
+					<div style="display: inline-block; width: 32px; height: 32px; background: url('img/levelbase.png'); background-position-x: -192px; background-position-y: -96px;"></div></td>
+				</tr>
+				<tr>
+					<td style="padding-right: 10px;"><font color="indianred">Red:</font></td><td>
+					<div style="display: inline-block; width: 24px; height: 32px; background: url('img/player_sheet_red.png');"></div>
+					<div style="display: inline-block; width: 32px; height: 32px; background: url('img/levelbase.png'); background-position-x: -224px; background-position-y: -96px;"></div></td>
+				</tr>
+				<tr>
+					<td style="padding-right: 10px;"><font color="gold">Yellow:</font></td><td>
+					<div style="display: inline-block; width: 24px; height: 32px; background: url('img/player_sheet_yellow.png');"></div>
+					<div style="display: inline-block; width: 32px; height: 32px; background: url('img/levelbase.png'); background-position-x: -256px; background-position-y: -96px;"></div></td>
+				</tr>
+			</table>
+
+			<i style="display: block; margin-top: 10px;">Powerups & pikcups:</i>
+
+			<table style="margin-top: 10px; max-width: 20%;">
+				<tr>
+					<td style="padding-right: 10px;">Hourglass:</td><td>
+					<div style="display: inline-block; width: 14px; height: 13px; background: url('img/hourglass_sheet.png') #3e414e;"></div><td>
+				</tr>
+				<tr>
+					<td style="text-align: center; font-size: 75%; padding-bottom: 10px;" colspan="2">
+						Extends the time of positive effects and decreases the time of negative effects on the player.
+					<td>
+				</tr>
+
+				<tr>
+					<td style="padding-right: 10px;">Cannonball:</td><td>
+					<div style="display: inline-block; width: 16px; height: 16px; background: url('img/cannonball.png') #3e414e;"></div><td>
+				</tr>
+				<tr>
+					<td style="text-align: center; font-size: 75%; padding-bottom: 10px;" colspan="2">
+						Shootable. Kills player on hit.
+					<td>
+				</tr>
+
+				<tr>
+					<td style="padding-right: 10px;">Snowflake:</td><td>
+					<div style="display: inline-block; width: 19px; height: 19px; background: url('img/snowflake.png') #3e414e;"></div><td>
+				</tr>
+				<tr>
+					<td style="text-align: center; font-size: 75%; padding-bottom: 10px;" colspan="2">
+						Shootable. Freezes player for 5 seconds on hit.
+					<td>
+				</tr>
+			</table>
+
+			<br>
+			<div style="margin-top: 20px;">
+				Copyright &copy; 2018, getthechest.com<br>
+			</div> 
+			<div style="font-size: 50%; margin-top: 5px;">
+				Using: socket.io, CreateJS, jQuery, Press Start 2P font, js-cookie
+			</div> 
+		</center>
+
+		<a href="https://github.com/vorty123/getthechest.com"><img style="max-width: 15%; position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/52760788cde945287fbb584134c4cbc2bc36f904/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f77686974655f6666666666662e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_white_ffffff.png"></a>
+
+	</body>
+</html>
