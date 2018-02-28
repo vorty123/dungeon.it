@@ -125,6 +125,60 @@ socket.on("gameStarted",
 var arrows = []
 var aiming = false
 
+$("#message").focus(
+	function()
+	{
+		$("#message").val("");
+
+		if(inGame)
+			socket.emit("writingChat", true);
+	});
+
+$("#message").blur(
+	function()
+	{
+		$("#message").val("");
+
+		if(inGame)
+			socket.emit("writingChat", false);
+	});
+
+function movementKeys(event, key, aiming)
+{
+	if(key == 87 || key ==  38)
+	{
+		socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
+		handleMove({soc: socket.id, direction: {x: 0, y: -1}}); //"up")
+		nextMove = getTickCount()+240;
+		keyDown = key
+		event.preventDefault();
+	}
+	else if(key == 83 || key ==  40)
+	{
+		socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
+		handleMove({soc: socket.id, direction: {x: 0, y: 1}}); //"down")
+		nextMove = getTickCount()+240;
+		keyDown = key
+		event.preventDefault();
+	}
+	else if(key == 65 || key ==  37)
+	{
+		socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
+		handleMove({soc: socket.id, direction: {x: -1, y: 0}}); //"left")
+		nextMove = getTickCount()+240;
+		keyDown = key
+		event.preventDefault();
+	}
+	else if(key == 68 || key ==  39)
+	{
+		socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
+		handleMove({soc: socket.id, direction: {x: 1, y: 0}}); //"right")
+		nextMove = getTickCount()+240;
+		keyDown = key
+		event.preventDefault();
+	}
+}
+
 $("body").keydown(
 	function (event){
 		var key = event.which;
@@ -134,12 +188,10 @@ $("body").keydown(
 			if(key == 13)
 			{
 				socket.emit("writeChat", $("#message").val())
-				$("#message").val("");
 				$("#message").blur();
 			}
 			else if(key == 27)
 			{
-				$("#message").val("");
 				$("#message").blur();
 			}
 		}
@@ -148,6 +200,7 @@ $("body").keydown(
 			if(inGame && (key == 13 || key == 89 || key == 84))
 			{
 				$("#message").focus();
+				event.preventDefault();
 			}
 			else if(keyDown == 0)
 			{
@@ -164,7 +217,7 @@ $("body").keydown(
 								if(aiming)
 								{
 									aiming = false;
-									keyDown = key;
+									//keyDown = key;
 
 									stage.removeChild(arrows[0]);
 									stage.removeChild(arrows[1]);
@@ -176,7 +229,7 @@ $("body").keydown(
 								else
 								{
 									aiming = true;
-									keyDown = key;
+									//keyDown = key;
 									
 									var xt = players[playersBySocket[socket.id]][4];
 									var yt = players[playersBySocket[socket.id]][5];
@@ -211,7 +264,7 @@ $("body").keydown(
 					{
 						if(aiming)
 						{
-							if(key == 87 || key ==  38)
+							if(key ==  38)
 							{
 								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
 								//nextMove = getTickCount()+240;
@@ -227,7 +280,7 @@ $("body").keydown(
 
 								event.preventDefault();
 							}
-							else if(key == 83 || key ==  40)
+							else if(key ==  40)
 							{
 								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
 								//nextMove = getTickCount()+240;
@@ -243,7 +296,7 @@ $("body").keydown(
 
 								event.preventDefault();
 							}
-							else if(key == 65 || key ==  37)
+							else if(key ==  37)
 							{
 								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
 								//nextMove = getTickCount()+240;
@@ -259,7 +312,7 @@ $("body").keydown(
 
 								event.preventDefault();
 							}
-							else if(key == 68 || key ==  39)
+							else if(key ==  39)
 							{
 								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
 								//nextMove = getTickCount()+240;
@@ -275,41 +328,26 @@ $("body").keydown(
 
 								event.preventDefault();
 							}
+
+							if( key == 87 ||
+								key == 83 ||
+								key == 65 ||
+								key == 68)
+							{
+								aiming = false;
+
+								stage.removeChild(arrows[0]);
+								stage.removeChild(arrows[1]);
+								stage.removeChild(arrows[2]);
+								stage.removeChild(arrows[3]);
+								
+								movementKeys(event, key, aiming);
+								event.preventDefault();
+							}
 						}
 						else if(getTickCount()  > nextMove)
 						{
-							if(key == 87 || key ==  38)
-							{
-								socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
-								handleMove({soc: socket.id, direction: {x: 0, y: -1}}); //"up")
-								nextMove = getTickCount()+240;
-								keyDown = key
-								event.preventDefault();
-							}
-							else if(key == 83 || key ==  40)
-							{
-								socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
-								handleMove({soc: socket.id, direction: {x: 0, y: 1}}); //"down")
-								nextMove = getTickCount()+240;
-								keyDown = key
-								event.preventDefault();
-							}
-							else if(key == 65 || key ==  37)
-							{
-								socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
-								handleMove({soc: socket.id, direction: {x: -1, y: 0}}); //"left")
-								nextMove = getTickCount()+240;
-								keyDown = key
-								event.preventDefault();
-							}
-							else if(key == 68 || key ==  39)
-							{
-								socket.emit("moveCharacter", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
-								handleMove({soc: socket.id, direction: {x: 1, y: 0}}); //"right")
-								nextMove = getTickCount()+240;
-								keyDown = key
-								event.preventDefault();
-							}
+							movementKeys(event, key, aiming);
 						}
 					}
 				}
@@ -362,6 +400,7 @@ function init()
 	queue.loadFile({id:"player_sheet_yellow", src:"img/player_sheet_yellow.png"});
 
 	queue.loadFile({id:"hourglass_sheet", src:"img/hourglass_sheet.png"});
+	queue.loadFile({id:"speechbubble", src:"img/speechbubble.png"});
 	
 	queue.loadFile({id:"bitmap:cannonball", src:"img/cannonball.png"});
 	queue.loadFile({id:"bitmap:snowflake", src:"img/snowflake.png"});
@@ -387,6 +426,7 @@ var playerSheet_red;
 var playerSheet_green;
 var playerSheet_yellow;
 var hourglassSheet;
+var speechbubbleSheet;
 
 
 function handleFileLoad(event)
@@ -492,6 +532,17 @@ function handleFileLoad(event)
 			}
 		});
 		console.log("player sheet loaded")
+	}
+	else if(event.item.id == "speechbubble")
+	{
+		speechbubbleSheet = new createjs.SpriteSheet({
+			images: [event.result], 
+			frames: {width: 32, height: 16, regX: 0, regY: 0}, 
+			animations: {
+				idle: [0, 3, "idle", 0.05],
+			}
+		});
+		console.log("hourglass sheet loaded")
 	}
 	else if(event.item.id == "hourglass_sheet")
 	{
@@ -729,6 +780,9 @@ function createPlayer(id, x, y, socket, name, color)
 	setPlayersOrders()
 
 	players[id][6] = false // carrying
+	players[id][7] = false // carrying (id)
+	
+	players[id][8] = new createjs.Sprite(speechbubbleSheet, "idle");
 
 	console.log("player created: " + id)
 
@@ -1115,6 +1169,17 @@ socket.on("bigText",
 		}
 	});
 
+socket.on("writingChat", 
+	function(data) {
+		if(data.state)
+		{
+			stage.addChild(players[playersBySocket[data.soc]][8]);
+			players[playersBySocket[data.soc]][8].gotoAndPlay("idle");
+		}
+		else
+			stage.removeChild(players[playersBySocket[data.soc]][8]);
+	});
+
 socket.on("chatMessage", 
 	function(data) {
 		$("#chat").append("<li>" + data + "</li>");
@@ -1229,6 +1294,8 @@ socket.on("teleportCharacter",
 
 		var id = playersBySocket[data.soc]
 
+		jumpDatas[id] = null
+
 		players[id][4] = data.x;
 		players[id][5] = data.y;
 
@@ -1245,7 +1312,7 @@ socket.on("teleportCharacter",
 
 var FPS = 0;
 
-var projectileSpeed = 100 //hány ms egy tile
+var projectileSpeed = 75 //hány ms egy tile
 
 function render(event) {
 	FPS = Math.floor(1000/event.delta)
@@ -1371,6 +1438,9 @@ function render(event) {
 				players[id][6].x = players[id][0].x;
 				players[id][6].y = players[id][0].y+20;
 			}
+
+			players[id][8].x = players[id][0].x-16;
+			players[id][8].y = players[id][0].y-40;
 		}
 	}
 
