@@ -367,6 +367,11 @@ function init()
 	queue.loadFile({id:"bitmap:snowflake", src:"img/snowflake.png"});
 
 	queue.load();
+
+	createjs.Sound.registerSound("sounds/countdown.wav", "countdown");
+	createjs.Sound.registerSound("sounds/hit.wav", "hit");
+	createjs.Sound.registerSound("sounds/jump.wav", "jump");
+	createjs.Sound.registerSound("sounds/pickup.wav", "pickup");
 }
 
 var levelBaseSheet;
@@ -956,8 +961,11 @@ var projectiles = []
 
 socket.on("deleteProjectile", 
 	function(data) {
-		stage.removeChild(projectiles[data][0]);
-		delete projectiles[data];
+		stage.removeChild(projectiles[data.id][0]);
+		delete projectiles[data.id];
+
+		if(!data.outOfRange)
+			createjs.Sound.play("hit");
 	});
 
 socket.on("createProjectile", 
@@ -1000,6 +1008,7 @@ socket.on("pickUpObject",
 		{
 			var id = playersBySocket[data.soc];
 			putPlayerInCarry(id, data.obj);
+			createjs.Sound.play("pickup");
 		}
 	});
 
@@ -1019,7 +1028,7 @@ socket.on('connect',
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
 	});
 
-socket.on('leavedRoom', 
+socket.on('leftRoom', 
 	function() {
 		inGame = false;
 		started = false;
@@ -1030,7 +1039,7 @@ socket.on('leavedRoom',
 		$("#onlineData").html("")
 		$(".bigtext").html("")
 
-		$("#chat").append("<li style='color: indianred;'>Leaved room</li>");
+		$("#chat").append("<li style='color: indianred;'>Left room</li>");
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
 	});
 
@@ -1074,6 +1083,9 @@ socket.on("bigText",
 			clearTimeout(tmo);
 
 		tmo = false;
+
+		if(data.sound)
+			createjs.Sound.play("countdown");
 
 		if(data.text)
 		{
@@ -1144,6 +1156,9 @@ socket.on("createPlayer",
 function handleMove(data)
 {
 	var id = playersBySocket[data.soc];
+
+	if(data.soc == socket.id)
+		createjs.Sound.play("jump");
 
 	if(data.x)
 	{
