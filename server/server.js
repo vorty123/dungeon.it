@@ -459,6 +459,25 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 			
 			clearInterval(timer);
 
+			if(projectiles[id].obj == "cannonball" || projectiles[id].obj == "hourglass")
+			{
+				if(randomBetween(1, 10) <= 8)
+				{
+					var x = randomBetween(1, 19);
+					var y = randomBetween(1, 19);
+
+					if(!roomStructures[currentRoom].roomCollisions[x][y])
+					{
+						var oid = createObject(currentRoom, projectiles[id].obj, x, y);
+
+						roomStructures[currentRoom].roomCollisions[x][y] = "pickable";
+						roomStructures[currentRoom].pickables[x][y] = oid;
+
+						io.to(currentRoom).emit("objectCreated", {id: projectiles[id].obj, x: x, y: y});
+					}
+				}
+			}
+
 			delete projectiles[id];
 		}
 	}
