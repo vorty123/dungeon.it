@@ -8,7 +8,7 @@ var soundMuted = false;
 
 function playSound(sound)
 {
-	if(soundMuted)
+	if(!soundMuted)
 		createjs.Sound.play(sound);
 }
 
@@ -1263,9 +1263,6 @@ function handleMove(data)
 {
 	var id = playersBySocket[data.soc];
 
-	if(data.soc == socket.id)
-		playSound("jump");
-
 	if(data.x)
 	{
 		players[id][4] = data.x;
@@ -1275,6 +1272,9 @@ function handleMove(data)
 	if((players[id][4]+data.direction.x) >= 1 && (players[id][5]+data.direction.y) >= 1 && (players[id][4]+data.direction.x) <= 19 && (players[id][5]+data.direction.y) <= 19 &&
 		(!collisions[(players[id][4]+data.direction.x)] || collisions[(players[id][4]+data.direction.x)][(players[id][5]+data.direction.y)] != "nomove"))
 	{
+		if(data.soc == socket.id)
+			playSound("jump");
+
 		if(data.direction.x == -1)
 			players[id][0].scaleX = -1;
 		else if(data.direction.x == 1)
