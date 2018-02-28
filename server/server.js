@@ -303,7 +303,6 @@ function generateMap(room)
 	roomStructures[room].pickables = pickables;
 }
 
-
 function createRoom(roomName, players)
 {
 	rooms[roomName] = {
@@ -350,14 +349,13 @@ function refreshRoomPlayers(room)
 
 	if(rooms[room].currentPlayers <= 0)
 	{	
-		if(roomStructures[room].timeouts[0])
-			clearTimeout(roomStructures[room].timeouts[0])
+		for(var i in roomStructures[room].timeouts)
+		{
+			if(roomStructures[room].timeouts[i])
+				clearTimeout(roomStructures[room].timeouts[i])
+		}
 
-		if(roomStructures[room].timeouts[1])			
-			clearTimeout(roomStructures[room].timeouts[1])
-
-		if(roomStructures[room].timeouts[2])			
-			clearTimeout(roomStructures[room].timeouts[2])
+		roomStructures[room].timeouts = []
 
 		delete rooms[room];
 		delete roomStructures[room];
@@ -414,6 +412,16 @@ function killPlayer(id, by)
 		io.to(room).emit("chatMessage", "<font color='" + playerDatas[id].color + "'>" + playerDatas[id].name + "</font> killed")
 }
 
+function freezePlayer(currentRoom, uid, state)
+{
+	playerDatas[uid].frozen = state
+
+	if(state === false)
+		io.to(currentRoom).emit("freezePlayer", {id: uid, state: false})
+	else
+		io.to(currentRoom).emit("freezePlayer", {id: uid, state: true})
+}
+
 function checkProjectileDeath(currentRoom, timer, id, obj)
 {
 	if(!rooms[currentRoom])
@@ -442,6 +450,30 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 				}
 			}
 		}
+		else if(projectiles[id].obj == "snowflake")
+		{
+			var users = getRoomUsers(currentRoom);
+
+			for(var uid in users)
+			{
+				if(playerDatas[uid].x == projectiles[id].x && playerDatas[uid].y == projectiles[id].y)
+				{
+					deleteProjectile = true;
+
+					var timerid = roomStructures[currentRoom].timeouts.length;
+
+					if(playerDatas[uid].frozen)
+					{
+						timerid = playerDatas[uid].frozen
+						clearTimeout(timerid);
+					}
+
+					roomStructures[currentRoom].timeouts[timerid] = setTimeout(freezePlayer, 5000, currentRoom, uid, false);
+
+					freezePlayer(currentRoom, uid, timerid)
+				}
+			}
+		}
 
 		var oor = false
 
@@ -459,12 +491,12 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 			
 			clearInterval(timer);
 
-			if(projectiles[id].obj == "cannonball" || projectiles[id].obj == "hourglass")
+			if(projectiles[id].obj == "cannonball" || projectiles[id].obj == "snowflake")
 			{
-				if(randomBetween(1, 10) <= 8)
+				if(randomBetween(1, 10) < 8)
 				{
-					var x = randomBetween(1, 19);
-					var y = randomBetween(1, 19);
+					var x = randomBetween(1+1, 19-1);
+					var y = randomBetween(1+1, 19-1);
 
 					if(!roomStructures[currentRoom].roomCollisions[x][y])
 					{
@@ -569,15 +601,13 @@ function joinRoom(socket, data, currentRoom)
 			rooms[currentRoom].cd = true
 			io.to(currentRoom).emit("bigText", {text: false})
 
-			if(roomStructures[currentRoom].timeouts[0])
-				clearTimeout(roomStructures[currentRoom].timeouts[0])
+			for(var i in roomStructures[currentRoom].timeouts)
+			{
+				if(roomStructures[currentRoom].timeouts[i])
+					clearTimeout(roomStructures[currentRoom].timeouts[i])
+			}
 
-			if(roomStructures[currentRoom].timeouts[1])			
-				clearTimeout(roomStructures[currentRoom].timeouts[1])
-
-			if(roomStructures[currentRoom].timeouts[2])			
-				clearTimeout(roomStructures[currentRoom].timeouts[2])
-
+			roomStructures[currentRoom].timeouts = []
 			
 			roomStructures[currentRoom].timeouts[0] = setTimeout(function () { io.to(currentRoom).emit("bigText", {sound: true, text: "READY!", time: 900, size: 1}) }, 2000)
 			roomStructures[currentRoom].timeouts[1] = setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "SET!", time: 900, size: 1}) }, 3000)
@@ -590,6 +620,8 @@ function joinRoom(socket, data, currentRoom)
 
 					rooms[currentRoom].started = true
 					rooms[currentRoom].cd = false
+
+					roomStructures[currentRoom].timeouts = []
 
 					io.emit("roomList", rooms)
 				}
@@ -728,7 +760,7 @@ io.on("connection", function(socket){
 			//console.log("mvchr1 " + playerDatas[socket.id].nextMove + ", " + getTickCount());
 			//console.log(playerDatas[socket.id].nextMove < getTickCount());
 			//console.log(currentRoom)
-			if(currentRoom && rooms[currentRoom].started && currentSpawnPoint >= 0 && playerDatas[socket.id] && playerDatas[socket.id].nextMove < getTickCount())
+			if(currentRoom && rooms[currentRoom].started && currentSpawnPoint >= 0 && playerDatas[socket.id] && playerDatas[socket.id].nextMove < getTickCount() && !playerDatas[socket.id].frozen)
 			{
 				//console.log("mvchr2 " + playerDatas[socket.id].nextMove + ", " + getTickCount());
 

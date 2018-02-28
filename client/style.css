@@ -49,7 +49,7 @@ a {
 #rightside {
 	position: absolute;
 	
-	top: 5%;
+	top: 3%;
 	right: 0;
 
 	width: 20%;
@@ -128,4 +128,32 @@ input, button, select {
 
 #roomListTable tr:first-child td {	
 	padding-bottom: 10px;
+}
+
+.progressbarOuter {
+	width: 100%;
+	margin-bottom: 10px;
+
+	height: 13px !important;
+	padding-top: 2px;
+
+	position: relative;
+}
+
+.progressbarOuter img {
+	max-height: 16px;
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.progressbar {
+	display: block;
+	width: 50%;
+	margin-left: 24px;
+	height: 10px;
+}
+
+.progressbar div {
+	height: 100%;
 }

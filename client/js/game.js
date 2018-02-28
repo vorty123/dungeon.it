@@ -12,6 +12,27 @@ function playSound(sound)
 		createjs.Sound.play(sound);
 }
 
+//img/snowflake.png - #41acba
+
+function manageProgressbar(id, value, image, color)
+{
+	if($("#" + id).length)
+	{
+		if(value < 0)
+		{
+			$("#" + id).remove();
+		}
+		else
+		{
+			$("#" + id + "-val").css("width", value + "%");
+		}
+	}
+	else
+	{
+		$("#bars").append('<div id="' + id + '" class="progressbarOuter"><img src="' + image + '"><div class="progressbar" style="border: 1px solid ' + color + ';"><div id="' + id + '-val" style="background: ' + color + '; width: ' + value + '%;"></div></div></div>');
+	}
+}
+
 var xSize = 21
 var ySize = 21
 
@@ -20,7 +41,6 @@ var playersBySocket = [];
 
 var tiles = [...Array(xSize).keys()].map(i => Array(ySize));
 var objects = [...Array(xSize).keys()].map(i => Array(ySize));
-
 
 var collisions = []
 
@@ -229,148 +249,151 @@ $("body").keydown(
 			{
 				console.log("key event: " + key)
 				
-				if(started)
+				if(!players[playersBySocket[socket.id]][9])
 				{
-					if(key == 32)
+					if(started)
 					{
-						if(players[playersBySocket[socket.id]][6])
+						if(key == 32)
 						{
-							if(players[playersBySocket[socket.id]][7] == "cannonball" || players[playersBySocket[socket.id]][7] == "snowflake")
+							if(players[playersBySocket[socket.id]][6])
 							{
-								if(aiming)
+								if(players[playersBySocket[socket.id]][7] == "cannonball" || players[playersBySocket[socket.id]][7] == "snowflake")
+								{
+									if(aiming)
+									{
+										aiming = false;
+										//keyDown = key;
+
+										stage.removeChild(arrows[0]);
+										stage.removeChild(arrows[1]);
+										stage.removeChild(arrows[2]);
+										stage.removeChild(arrows[3]);
+
+										event.preventDefault();
+									}
+									else
+									{
+										aiming = true;
+										//keyDown = key;
+										
+										var xt = players[playersBySocket[socket.id]][4];
+										var yt = players[playersBySocket[socket.id]][5];
+
+										if(xt <= 19 && xt >= 1 && (yt-1) <= 19 && (yt-1) >= 1 && !(collisions[xt] && collisions[xt][(yt-1)] && collisions[xt][(yt-1)] != "pickable"))
+											stage.addChild(arrows[0]);
+
+										if((xt+1) <= 19 && (xt+1) >= 1 && yt <= 19 && yt >= 1 && !(collisions[(xt+1)] && collisions[(xt+1)][yt] && collisions[(xt+1)][yt] != "pickable"))
+											stage.addChild(arrows[1]);
+
+										if((xt-1) <= 19 && (xt-1) >= 1 && yt <= 19 && yt >= 1 && !(collisions[(xt-1)] && collisions[(xt-1)][yt] && collisions[(xt-1)][yt] != "pickable"))
+											stage.addChild(arrows[2]);
+
+										if(xt <= 19 && xt >= 1 && (yt+1) <= 19 && (yt+1) >= 1 && !(collisions[xt] && collisions[xt][(yt+1)] && collisions[xt][(yt+1)] != "pickable"))
+											stage.addChild(arrows[3]);
+
+
+										event.preventDefault();
+									}
+								}
+								else
 								{
 									aiming = false;
-									//keyDown = key;
+									socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5]});
+									keyDown = key;
+									//nextMove = getTickCount()+240;
+									event.preventDefault();	
+								}
+							}
+						}
+						else
+						{
+							if(aiming)
+							{
+								if(key ==  38)
+								{
+									socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
+									//nextMove = getTickCount()+240;
+									keyDown = key
+									aiming = false;
 
 									stage.removeChild(arrows[0]);
 									stage.removeChild(arrows[1]);
 									stage.removeChild(arrows[2]);
 									stage.removeChild(arrows[3]);
 
+									console.log("shoot")
+
 									event.preventDefault();
 								}
-								else
+								else if(key ==  40)
 								{
-									aiming = true;
-									//keyDown = key;
-									
-									var xt = players[playersBySocket[socket.id]][4];
-									var yt = players[playersBySocket[socket.id]][5];
+									socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
+									//nextMove = getTickCount()+240;
+									keyDown = key
+									aiming = false;
 
-									if(xt <= 19 && xt >= 1 && (yt-1) <= 19 && (yt-1) >= 1 && !(collisions[xt] && collisions[xt][(yt-1)] && collisions[xt][(yt-1)] != "pickable"))
-										stage.addChild(arrows[0]);
+									stage.removeChild(arrows[0]);
+									stage.removeChild(arrows[1]);
+									stage.removeChild(arrows[2]);
+									stage.removeChild(arrows[3]);
 
-									if((xt+1) <= 19 && (xt+1) >= 1 && yt <= 19 && yt >= 1 && !(collisions[(xt+1)] && collisions[(xt+1)][yt] && collisions[(xt+1)][yt] != "pickable"))
-										stage.addChild(arrows[1]);
-
-									if((xt-1) <= 19 && (xt-1) >= 1 && yt <= 19 && yt >= 1 && !(collisions[(xt-1)] && collisions[(xt-1)][yt] && collisions[(xt-1)][yt] != "pickable"))
-										stage.addChild(arrows[2]);
-
-									if(xt <= 19 && xt >= 1 && (yt+1) <= 19 && (yt+1) >= 1 && !(collisions[xt] && collisions[xt][(yt+1)] && collisions[xt][(yt+1)] != "pickable"))
-										stage.addChild(arrows[3]);
-
+									console.log("shoot")
 
 									event.preventDefault();
 								}
+								else if(key ==  37)
+								{
+									socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
+									//nextMove = getTickCount()+240;
+									keyDown = key
+									aiming = false;
+
+									stage.removeChild(arrows[0]);
+									stage.removeChild(arrows[1]);
+									stage.removeChild(arrows[2]);
+									stage.removeChild(arrows[3]);
+
+									console.log("shoot")
+
+									event.preventDefault();
+								}
+								else if(key ==  39)
+								{
+									socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
+									//nextMove = getTickCount()+240;
+									keyDown = key
+									aiming = false;
+
+									stage.removeChild(arrows[0]);
+									stage.removeChild(arrows[1]);
+									stage.removeChild(arrows[2]);
+									stage.removeChild(arrows[3]);
+
+									console.log("shoot")
+
+									event.preventDefault();
+								}
+
+								if( key == 87 ||
+									key == 83 ||
+									key == 65 ||
+									key == 68)
+								{
+									aiming = false;
+
+									stage.removeChild(arrows[0]);
+									stage.removeChild(arrows[1]);
+									stage.removeChild(arrows[2]);
+									stage.removeChild(arrows[3]);
+
+									movementKeys(event, key, aiming);
+									event.preventDefault();
+								}
 							}
-							else
+							else if(getTickCount()  > nextMove)
 							{
-								aiming = false;
-								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5]});
-								keyDown = key;
-								//nextMove = getTickCount()+240;
-								event.preventDefault();	
-							}
-						}
-					}
-					else
-					{
-						if(aiming)
-						{
-							if(key ==  38)
-							{
-								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
-								//nextMove = getTickCount()+240;
-								keyDown = key
-								aiming = false;
-
-								stage.removeChild(arrows[0]);
-								stage.removeChild(arrows[1]);
-								stage.removeChild(arrows[2]);
-								stage.removeChild(arrows[3]);
-
-								console.log("shoot")
-
-								event.preventDefault();
-							}
-							else if(key ==  40)
-							{
-								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
-								//nextMove = getTickCount()+240;
-								keyDown = key
-								aiming = false;
-
-								stage.removeChild(arrows[0]);
-								stage.removeChild(arrows[1]);
-								stage.removeChild(arrows[2]);
-								stage.removeChild(arrows[3]);
-
-								console.log("shoot")
-
-								event.preventDefault();
-							}
-							else if(key ==  37)
-							{
-								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
-								//nextMove = getTickCount()+240;
-								keyDown = key
-								aiming = false;
-
-								stage.removeChild(arrows[0]);
-								stage.removeChild(arrows[1]);
-								stage.removeChild(arrows[2]);
-								stage.removeChild(arrows[3]);
-
-								console.log("shoot")
-
-								event.preventDefault();
-							}
-							else if(key ==  39)
-							{
-								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
-								//nextMove = getTickCount()+240;
-								keyDown = key
-								aiming = false;
-
-								stage.removeChild(arrows[0]);
-								stage.removeChild(arrows[1]);
-								stage.removeChild(arrows[2]);
-								stage.removeChild(arrows[3]);
-
-								console.log("shoot")
-
-								event.preventDefault();
-							}
-
-							if( key == 87 ||
-								key == 83 ||
-								key == 65 ||
-								key == 68)
-							{
-								aiming = false;
-
-								stage.removeChild(arrows[0]);
-								stage.removeChild(arrows[1]);
-								stage.removeChild(arrows[2]);
-								stage.removeChild(arrows[3]);
-
 								movementKeys(event, key, aiming);
-								event.preventDefault();
 							}
-						}
-						else if(getTickCount()  > nextMove)
-						{
-							movementKeys(event, key, aiming);
 						}
 					}
 				}
@@ -462,6 +485,18 @@ var playerSheet_yellow;
 var hourglassSheet;
 var speechbubbleSheet;
 
+var playerAnimations = {
+	idle: [4, 7, true, 0.075],
+	jump1: [0, 1, false, 0.125],
+	jump2: [2, 3, "idle", 0.125],
+
+	idle_carrying: [4+8, 7+8, true, 0.075],
+	jump1_carrying: [0+8, 1+8, false, 0.125],
+	jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
+
+	//frozen_normal: [16, 16, true, 1],
+	//frozen_carry: [17, 17, true, 1],
+}
 
 function handleFileLoad(event)
 {
@@ -504,15 +539,7 @@ function handleFileLoad(event)
 		playerSheet_green = new createjs.SpriteSheet({
 			images: [event.result], 
 			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
-			animations: {
-				idle: [4, 7, true, 0.075],
-				jump1: [0, 1, false, 0.125],
-				jump2: [2, 3, "idle", 0.125],
-
-				idle_carrying: [4+8, 7+8, true, 0.075],
-				jump1_carrying: [0+8, 1+8, false, 0.125],
-				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
-			}
+			animations: playerAnimations,
 		});
 		console.log("player sheet loaded")
 	}
@@ -521,15 +548,7 @@ function handleFileLoad(event)
 		playerSheet_red = new createjs.SpriteSheet({
 			images: [event.result], 
 			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
-			animations: {
-				idle: [4, 7, true, 0.075],
-				jump1: [0, 1, false, 0.125],
-				jump2: [2, 3, "idle", 0.125],
-
-				idle_carrying: [4+8, 7+8, true, 0.075],
-				jump1_carrying: [0+8, 1+8, false, 0.125],
-				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
-			}
+			animations: playerAnimations,
 		});
 		console.log("player sheet loaded")
 	}
@@ -538,15 +557,7 @@ function handleFileLoad(event)
 		playerSheet_blue = new createjs.SpriteSheet({
 			images: [event.result], 
 			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
-			animations: {
-				idle: [4, 7, true, 0.075],
-				jump1: [0, 1, false, 0.125],
-				jump2: [2, 3, "idle", 0.125],
-
-				idle_carrying: [4+8, 7+8, true, 0.075],
-				jump1_carrying: [0+8, 1+8, false, 0.125],
-				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
-			}
+			animations: playerAnimations,
 		});
 		console.log("player sheet loaded")
 	}
@@ -555,15 +566,7 @@ function handleFileLoad(event)
 		playerSheet_yellow = new createjs.SpriteSheet({
 			images: [event.result], 
 			frames: {width: 24, height: 32, regX: 0, regY: 0}, 
-			animations: {
-				idle: [4, 7, true, 0.075],
-				jump1: [0, 1, false, 0.125],
-				jump2: [2, 3, "idle", 0.125],
-
-				idle_carrying: [4+8, 7+8, true, 0.075],
-				jump1_carrying: [0+8, 1+8, false, 0.125],
-				jump2_carrying: [2+8, 3+8, "idle_carrying", 0.125],
-			}
+			animations: playerAnimations,
 		});
 		console.log("player sheet loaded")
 	}
@@ -817,6 +820,8 @@ function createPlayer(id, x, y, socket, name, color)
 	players[id][7] = false // carrying (id)
 	
 	players[id][8] = new createjs.Sprite(speechbubbleSheet, "idle");
+
+	players[id][9] = false // frozen
 
 	console.log("player created: " + id)
 
@@ -1088,6 +1093,35 @@ socket.on("createProjectile",
 		}
 	});
 
+socket.on("freezePlayer", 
+	function(data){
+		var id = playersBySocket[data.id]
+			
+		//frozen_normal: [16, 16, true, 1],
+		//frozen_carry: [17, 17, true, 1],
+
+		console.log("freeze: " + data.id + ", " + data.state)
+
+		if(data.state)
+			players[id][9] = getTickCount()
+		else
+		{
+			players[id][9] = false
+
+			if(data.id == socket.id)
+				manageProgressbar("frozen", -1, "img/snowflake.png", "#41acba");
+		}
+
+		if(data.state)
+		{
+			if(players[id][6])
+				players[id][0].gotoAndStop(17);
+			else
+				players[id][0].gotoAndStop(16);
+		}
+		else
+			players[id][0].gotoAndPlay("idle");
+	});
 
 socket.on("pickUpObject", 
 	function(data){
@@ -1393,6 +1427,11 @@ function render(event) {
 				}
 			}
 		}
+	}
+
+	if(players[playersBySocket[socket.id]][9])
+	{
+		manageProgressbar("frozen", 100-((getTickCount()-players[playersBySocket[socket.id]][9])/5000)*100, "img/snowflake.png", "#41acba");
 	}
 	
 	for(var id in players)
