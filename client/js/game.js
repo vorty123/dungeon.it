@@ -372,7 +372,14 @@ function init()
 	createjs.Sound.registerSound("sounds/hit.wav", "hit");
 	createjs.Sound.registerSound("sounds/jump.wav", "jump");
 	createjs.Sound.registerSound("sounds/pickup.wav", "pickup");
+
+	if(Cookies.get("name"))
+		$("#name").val(Cookies.get("name"))
 }
+
+$("#name").change(function() {
+	Cookies.set("name", $("#name").val())
+});	
 
 var levelBaseSheet;
 var playerSheet_blue;
