@@ -1,6 +1,14 @@
 var socket = io("http://server.getthechest.com:8080");
 //var socket = io("http://192.168.1.7:8080");
 
+function sinDegrees(angle) {
+	return Math.sin(angle/180*Math.PI);
+}
+
+function cosDegrees(angle) {
+	return Math.cos(angle/180*Math.PI);
+}
+
 var stage;
 var queue;
 
@@ -43,6 +51,8 @@ var tiles = [...Array(xSize).keys()].map(i => Array(ySize));
 var objects = [...Array(xSize).keys()].map(i => Array(ySize));
 
 var collisions = []
+
+var currentDirection = 0;
 
 var inGame = false;
 
@@ -248,152 +258,149 @@ $("body").keydown(
 			else if(keyDown == 0)
 			{
 				console.log("key event: " + key)
-				
-				if(!players[playersBySocket[socket.id]][9])
+
+				if(started && !players[playersBySocket[socket.id]][9])
 				{
-					if(started)
+					if(key == 32)
 					{
-						if(key == 32)
+						if(players[playersBySocket[socket.id]][6])
 						{
-							if(players[playersBySocket[socket.id]][6])
+							if(players[playersBySocket[socket.id]][7] == "cannonball" || players[playersBySocket[socket.id]][7] == "snowflake")
 							{
-								if(players[playersBySocket[socket.id]][7] == "cannonball" || players[playersBySocket[socket.id]][7] == "snowflake")
+								if(aiming)
 								{
-									if(aiming)
-									{
-										aiming = false;
-										//keyDown = key;
+									aiming = false;
+									//keyDown = key;
 
-										stage.removeChild(arrows[0]);
-										stage.removeChild(arrows[1]);
-										stage.removeChild(arrows[2]);
-										stage.removeChild(arrows[3]);
+									stage.removeChild(arrows[0]);
+									stage.removeChild(arrows[1]);
+									stage.removeChild(arrows[2]);
+									stage.removeChild(arrows[3]);
 
-										event.preventDefault();
-									}
-									else
-									{
-										aiming = true;
-										//keyDown = key;
-										
-										var xt = players[playersBySocket[socket.id]][4];
-										var yt = players[playersBySocket[socket.id]][5];
-
-										if(xt <= 19 && xt >= 1 && (yt-1) <= 19 && (yt-1) >= 1 && !(collisions[xt] && collisions[xt][(yt-1)] && collisions[xt][(yt-1)] != "pickable"))
-											stage.addChild(arrows[0]);
-
-										if((xt+1) <= 19 && (xt+1) >= 1 && yt <= 19 && yt >= 1 && !(collisions[(xt+1)] && collisions[(xt+1)][yt] && collisions[(xt+1)][yt] != "pickable"))
-											stage.addChild(arrows[1]);
-
-										if((xt-1) <= 19 && (xt-1) >= 1 && yt <= 19 && yt >= 1 && !(collisions[(xt-1)] && collisions[(xt-1)][yt] && collisions[(xt-1)][yt] != "pickable"))
-											stage.addChild(arrows[2]);
-
-										if(xt <= 19 && xt >= 1 && (yt+1) <= 19 && (yt+1) >= 1 && !(collisions[xt] && collisions[xt][(yt+1)] && collisions[xt][(yt+1)] != "pickable"))
-											stage.addChild(arrows[3]);
-
-
-										event.preventDefault();
-									}
+									event.preventDefault();
 								}
 								else
 								{
-									aiming = false;
-									socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5]});
-									keyDown = key;
-									//nextMove = getTickCount()+240;
-									event.preventDefault();	
+									aiming = true;
+									//keyDown = key;
+									
+									var xt = players[playersBySocket[socket.id]][4];
+									var yt = players[playersBySocket[socket.id]][5];
+
+									if(xt <= 19 && xt >= 1 && (yt-1) <= 19 && (yt-1) >= 1 && !(collisions[xt] && collisions[xt][(yt-1)] && collisions[xt][(yt-1)] != "pickable"))
+										stage.addChild(arrows[0]);
+
+									if((xt+1) <= 19 && (xt+1) >= 1 && yt <= 19 && yt >= 1 && !(collisions[(xt+1)] && collisions[(xt+1)][yt] && collisions[(xt+1)][yt] != "pickable"))
+										stage.addChild(arrows[1]);
+
+									if((xt-1) <= 19 && (xt-1) >= 1 && yt <= 19 && yt >= 1 && !(collisions[(xt-1)] && collisions[(xt-1)][yt] && collisions[(xt-1)][yt] != "pickable"))
+										stage.addChild(arrows[2]);
+
+									if(xt <= 19 && xt >= 1 && (yt+1) <= 19 && (yt+1) >= 1 && !(collisions[xt] && collisions[xt][(yt+1)] && collisions[xt][(yt+1)] != "pickable"))
+										stage.addChild(arrows[3]);
+
+
+									event.preventDefault();
 								}
+							}
+							else
+							{
+								aiming = false;
+								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5]});
+								keyDown = key;
+								//nextMove = getTickCount()+240;
+								event.preventDefault();	
 							}
 						}
-						else
+					}
+					else
+					{
+						if(aiming)
 						{
-							if(aiming)
+							if(key ==  38)
 							{
-								if(key ==  38)
-								{
-									socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
-									//nextMove = getTickCount()+240;
-									keyDown = key
-									aiming = false;
+								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: -1}); //"up")
+								//nextMove = getTickCount()+240;
+								keyDown = key
+								aiming = false;
 
-									stage.removeChild(arrows[0]);
-									stage.removeChild(arrows[1]);
-									stage.removeChild(arrows[2]);
-									stage.removeChild(arrows[3]);
+								stage.removeChild(arrows[0]);
+								stage.removeChild(arrows[1]);
+								stage.removeChild(arrows[2]);
+								stage.removeChild(arrows[3]);
 
-									console.log("shoot")
+								console.log("shoot")
 
-									event.preventDefault();
-								}
-								else if(key ==  40)
-								{
-									socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
-									//nextMove = getTickCount()+240;
-									keyDown = key
-									aiming = false;
-
-									stage.removeChild(arrows[0]);
-									stage.removeChild(arrows[1]);
-									stage.removeChild(arrows[2]);
-									stage.removeChild(arrows[3]);
-
-									console.log("shoot")
-
-									event.preventDefault();
-								}
-								else if(key ==  37)
-								{
-									socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
-									//nextMove = getTickCount()+240;
-									keyDown = key
-									aiming = false;
-
-									stage.removeChild(arrows[0]);
-									stage.removeChild(arrows[1]);
-									stage.removeChild(arrows[2]);
-									stage.removeChild(arrows[3]);
-
-									console.log("shoot")
-
-									event.preventDefault();
-								}
-								else if(key ==  39)
-								{
-									socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
-									//nextMove = getTickCount()+240;
-									keyDown = key
-									aiming = false;
-
-									stage.removeChild(arrows[0]);
-									stage.removeChild(arrows[1]);
-									stage.removeChild(arrows[2]);
-									stage.removeChild(arrows[3]);
-
-									console.log("shoot")
-
-									event.preventDefault();
-								}
-
-								if( key == 87 ||
-									key == 83 ||
-									key == 65 ||
-									key == 68)
-								{
-									aiming = false;
-
-									stage.removeChild(arrows[0]);
-									stage.removeChild(arrows[1]);
-									stage.removeChild(arrows[2]);
-									stage.removeChild(arrows[3]);
-
-									movementKeys(event, key, aiming);
-									event.preventDefault();
-								}
+								event.preventDefault();
 							}
-							else if(getTickCount()  > nextMove)
+							else if(key ==  40)
 							{
+								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 0, y: 1}); //"down")
+								//nextMove = getTickCount()+240;
+								keyDown = key
+								aiming = false;
+
+								stage.removeChild(arrows[0]);
+								stage.removeChild(arrows[1]);
+								stage.removeChild(arrows[2]);
+								stage.removeChild(arrows[3]);
+
+								console.log("shoot")
+
+								event.preventDefault();
+							}
+							else if(key ==  37)
+							{
+								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: -1, y: 0}); //"left")
+								//nextMove = getTickCount()+240;
+								keyDown = key
+								aiming = false;
+
+								stage.removeChild(arrows[0]);
+								stage.removeChild(arrows[1]);
+								stage.removeChild(arrows[2]);
+								stage.removeChild(arrows[3]);
+
+								console.log("shoot")
+
+								event.preventDefault();
+							}
+							else if(key ==  39)
+							{
+								socket.emit("putDownCarrying", {px: players[playersBySocket[socket.id]][4], py: players[playersBySocket[socket.id]][5], x: 1, y: 0}); //"right")
+								//nextMove = getTickCount()+240;
+								keyDown = key
+								aiming = false;
+
+								stage.removeChild(arrows[0]);
+								stage.removeChild(arrows[1]);
+								stage.removeChild(arrows[2]);
+								stage.removeChild(arrows[3]);
+
+								console.log("shoot")
+
+								event.preventDefault();
+							}
+
+							if( key == 87 ||
+								key == 83 ||
+								key == 65 ||
+								key == 68)
+							{
+								aiming = false;
+
+								stage.removeChild(arrows[0]);
+								stage.removeChild(arrows[1]);
+								stage.removeChild(arrows[2]);
+								stage.removeChild(arrows[3]);
+
 								movementKeys(event, key, aiming);
+								event.preventDefault();
 							}
+						}
+						else if(getTickCount()  > nextMove)
+						{
+							movementKeys(event, key, aiming);
 						}
 					}
 				}
@@ -1302,6 +1309,16 @@ function handleMove(data)
 		players[id][4] = data.x;
 		players[id][5] = data.y;
 	}
+	else
+	{
+		var dirX = data.direction.x;
+		var dirY = data.direction.y;
+
+		data.direction.x = Math.round(dirX * cosDegrees(currentDirection) - dirY * sinDegrees(currentDirection));
+		data.direction.y = Math.round(dirY * cosDegrees(currentDirection) + dirX * sinDegrees(currentDirection));
+	}
+
+	console.log(data.direction);
 
 	if((players[id][4]+data.direction.x) >= 1 && (players[id][5]+data.direction.y) >= 1 && (players[id][4]+data.direction.x) <= 19 && (players[id][5]+data.direction.y) <= 19 &&
 		(!collisions[(players[id][4]+data.direction.x)] || collisions[(players[id][4]+data.direction.x)][(players[id][5]+data.direction.y)] != "nomove"))
@@ -1382,9 +1399,45 @@ var FPS = 0;
 
 var projectileSpeed = 75 //hány ms egy tile
 
+var directionChange = false
+
+socket.on("directionChange",
+	function(data) {
+		if(data)
+		{
+			directionChange = {
+				started: getTickCount(),
+				time: data.time,
+			}
+
+			currentDirection = data.direction*90
+		}
+		else
+		{
+			directionChange = false;
+			$("#bars").html();
+		}
+	});
+
 function render(event) {
 	FPS = Math.floor(1000/event.delta)
 	
+	if(directionChange)
+	{
+		var progress = 100-((getTickCount()-directionChange.started)/directionChange.time)*100;
+
+		if(progress < 0)
+			manageProgressbar("keychange", 0, "img/key.png", "mediumseagreen");
+		else
+			manageProgressbar("keychange", progress, "img/key.png", "mediumseagreen");
+
+		if(playersBySocket[socket.id] && players[playersBySocket[socket.id]] && players[playersBySocket[socket.id]][9])
+		{
+			manageProgressbar("frozen", 100-((getTickCount()-players[playersBySocket[socket.id]][9])/5000)*100, "img/snowflake.png", "#41acba");
+		}
+		
+	}
+
 	for(var i in projectiles)
 	{
 		if(projectiles[i])
@@ -1429,11 +1482,6 @@ function render(event) {
 		}
 	}
 
-	if(players[playersBySocket[socket.id]][9])
-	{
-		manageProgressbar("frozen", 100-((getTickCount()-players[playersBySocket[socket.id]][9])/5000)*100, "img/snowflake.png", "#41acba");
-	}
-	
 	for(var id in players)
 	{
 		if(jumpDatas[id])

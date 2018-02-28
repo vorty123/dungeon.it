@@ -13,6 +13,14 @@ http.listen(port, function(){
 
 //var io = require("socket.io")(http);
 
+function sinDegrees(angle) {
+	return Math.sin(angle/180*Math.PI);
+}
+
+function cosDegrees(angle) {
+	return Math.cos(angle/180*Math.PI);
+}
+
 function escapeHtml(text) {
 	var map = {
 		'&': '&amp;',
@@ -404,6 +412,8 @@ function killPlayer(id, by)
 	playerDatas[id].x = x;
 	playerDatas[id].y = y;
 
+	changePlayerDirection(room, id, playerDatas[id].directionTimer, true);
+
 	io.to(room).emit("teleportCharacter", {soc: id, x: x, y: y});
 
 	if(by && playerDatas[by])
@@ -515,6 +525,27 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 	}
 }
 
+function changePlayerDirection(currentRoom, uid, timer, force)
+{
+	if(playerDatas[uid] && rooms[currentRoom].started)
+	{
+		var time = randomBetween(7500, 15000);
+		
+		roomStructures[currentRoom].timeouts[timer] = setTimeout(changePlayerDirection, time, currentRoom, uid, timer);
+		playerDatas[uid].directionTimeout = roomStructures[currentRoom].timeouts[timer];
+		playerDatas[uid].directionTimer = timer;
+
+		var dir = randomBetween(0, 3);
+
+		if(force)
+			dir = 0
+
+		playerDatas[uid].direction = dir*90;
+
+		io.sockets.connected[uid].emit("directionChange", {time: time, direction: dir});
+	}
+}
+
 function joinRoom(socket, data, currentRoom)
 {
 	var room = escapeHtml(data.room)
@@ -622,6 +653,16 @@ function joinRoom(socket, data, currentRoom)
 					rooms[currentRoom].cd = false
 
 					roomStructures[currentRoom].timeouts = []
+
+					var users = getRoomUsers(currentRoom);
+					var timer = 0;
+
+					for(var uid in users)
+					{
+						changePlayerDirection(currentRoom, uid, timer, true);
+
+						timer ++;
+					}
 
 					io.emit("roomList", rooms)
 				}
@@ -782,6 +823,12 @@ io.on("connection", function(socket){
 					var x = playerDatas[socket.id].x
 					var y = playerDatas[socket.id].y
 
+					var dirX = direction.x;
+					var dirY = direction.y;
+
+					direction.x = Math.round(dirX * cosDegrees(playerDatas[socket.id].direction) - dirY * sinDegrees(playerDatas[socket.id].direction));
+					direction.y = Math.round(dirX * sinDegrees(playerDatas[socket.id].direction) + dirY * cosDegrees(playerDatas[socket.id].direction));
+
 					x += direction.x
 					y += direction.y
 
@@ -810,8 +857,17 @@ io.on("connection", function(socket){
 	 							rooms[currentRoom].gameover = "<font color='" + playerDatas[socket.id].color + "'>" + playerDatas[socket.id].name + "</font>";
 	 							rooms[currentRoom].started = false;
 
+	 							for(var i in roomStructures[currentRoom].timeouts)
+								{
+									if(roomStructures[currentRoom].timeouts[i])
+										clearTimeout(roomStructures[currentRoom].timeouts[i])
+								}
+
+								roomStructures[currentRoom].timeouts = []
+
 	 							io.to(currentRoom).emit("bigText", {text: "Game over!<br><br>Winner: <font color='" + playerDatas[socket.id].color + "'>" + playerDatas[socket.id].name + "</font>", time: false, size: 0.5})
 	 							io.to(currentRoom).emit("gameStarted", false)
+	 							io.to(currentRoom).emit("directionChange", false)
 	 						}
 	 					}
 	 					else if(roomStructures[currentRoom].roomCollisions[x] && roomStructures[currentRoom].roomCollisions[x][y] == "pickable" && !playerDatas[socket.id].carrying)
@@ -922,13 +978,18 @@ io.on("connection", function(socket){
 					io.to(currentRoom).emit("objectCreated", {id: playerDatas[socket.id].carrying, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y})
 				}
 
+				if(playerDatas[socket.id].directionTimeout)
+				{
+					clearInterval(playerDatas[socket.id].directionTimeout)
+				}
+
 				refreshRoomPlayers(currentRoom)
 
 				io.to(currentRoom).emit("chatMessage", "<font color='" + playerDatas[socket.id].color + "'>" + playerDatas[socket.id].name + "</font> disconnected")
 				io.to(currentRoom).emit("destroyPlayer", socket.id)
 			}
 
-			playerDatas[socket.id] = false;
+			delete playerDatas[socket.id];
 			clients --;
 		});
 
