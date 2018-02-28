@@ -13,6 +13,18 @@ http.listen(port, function(){
 
 //var io = require("socket.io")(http);
 
+function escapeHtml(text) {
+	var map = {
+		'&': '&amp;',
+		'<': '&lt;',
+		'>': '&gt;',
+		'"': '&quot;',
+		"'": '&#039;'
+	};
+
+	return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
 var io = require('socket.io').listen(8080);
 
 var stdin = process.openStdin();
@@ -445,16 +457,35 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 		{
 			io.to(currentRoom).emit("deleteProjectile", {id: id, outOfRange: oor});
 			
-			delete projectiles[id];
-
 			clearInterval(timer);
+
+			if(projectiles[id].obj == "cannonball" || projectiles[id].obj == "hourglass")
+			{
+				if(randomBetween(1, 10) <= 8)
+				{
+					var x = randomBetween(1, 19);
+					var y = randomBetween(1, 19);
+
+					if(!roomStructures[currentRoom].roomCollisions[x][y])
+					{
+						var oid = createObject(currentRoom, projectiles[id].obj, x, y);
+
+						roomStructures[currentRoom].roomCollisions[x][y] = "pickable";
+						roomStructures[currentRoom].pickables[x][y] = oid;
+
+						io.to(currentRoom).emit("objectCreated", {id: projectiles[id].obj, x: x, y: y});
+					}
+				}
+			}
+
+			delete projectiles[id];
 		}
 	}
 }
 
 function joinRoom(socket, data, currentRoom)
 {
-	var room = data.room
+	var room = escapeHtml(data.room)
 
 	if(!currentRoom && rooms[room] && getRoomUsersLength(room) < rooms[room].neededPlayers && !rooms[room].started && !rooms[room].gameover && !rooms[room].cd)
 	{
@@ -499,7 +530,7 @@ function joinRoom(socket, data, currentRoom)
 			sx: x,
 			sy: y,
 			color: color,
-			name: data.name,//"Name",
+			name: escapeHtml(data.name),//"Name",
 			soc: socket.id,
 			room: currentRoom,
 			nextMove: 0,
@@ -549,11 +580,11 @@ function joinRoom(socket, data, currentRoom)
 
 			
 			roomStructures[currentRoom].timeouts[0] = setTimeout(function () { io.to(currentRoom).emit("bigText", {sound: true, text: "READY!", time: 900, size: 1}) }, 2000)
-			roomStructures[currentRoom].timeouts[1] = setTimeout(function () { io.to(currentRoom).emit("bigText", {sound: true, text: "SET!", time: 900, size: 1}) }, 3000)
+			roomStructures[currentRoom].timeouts[1] = setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "SET!", time: 900, size: 1}) }, 3000)
 			roomStructures[currentRoom].timeouts[2] = setTimeout(function () { 
 				if(rooms[currentRoom])
 				{
-					io.to(currentRoom).emit("bigText", {sound: true, text: "<font color='mediumseagreen'>GO!</font>", time: 1500, size: 2})
+					io.to(currentRoom).emit("bigText", {text: "<font color='mediumseagreen'>GO!</font>", time: 1500, size: 2})
 					io.to(currentRoom).emit("chatMessage",  "Game <font color='mediumseagreen'>started</font>!")
 					io.to(currentRoom).emit("gameStarted", true)
 
@@ -597,13 +628,18 @@ io.on("connection", function(socket){
 	var currentRoom = false;
 	var currentSpawnPoint = -1;
 
+	socket.on("writingChat", 
+		function(data)
+		{
+			if(currentRoom)
+				io.to(currentRoom).emit("writingChat", {state: data, soc: socket.id});
+		});
 
 	socket.on("writeChat", 
 		function(data)
 		{
-			//TODO: HTMLSPECIALCHARS
 			if(currentRoom)
-				io.to(currentRoom).emit("chatMessage", "<font color='" + playerDatas[socket.id].color + "'>" + playerDatas[socket.id].name + "</font>: " + data)
+				io.to(currentRoom).emit("chatMessage", "<font color='" + playerDatas[socket.id].color + "'>" + playerDatas[socket.id].name + "</font>: " + escapeHtml(data))
 		});
 
 	socket.on("putDownCarrying", 
@@ -664,7 +700,7 @@ io.on("connection", function(socket){
 
 								io.to(currentRoom).emit("createProjectile", {id: id, x: playerDatas[socket.id].x, y: playerDatas[socket.id].y, obj: playerDatas[socket.id].carrying, carrying: socket.id, xdir: data.x, ydir: data.y})
 
-								var timer = setInterval(function () { checkProjectileDeath(currentRoom, timer, id) }, 100)
+								var timer = setInterval(function () { checkProjectileDeath(currentRoom, timer, id) }, 75) // projectile speed as time
 
 								playerDatas[socket.id].carrying = false
 							}
@@ -777,12 +813,12 @@ io.on("connection", function(socket){
 		function(data){
 			if(!currentRoom)
 			{
-				if(!rooms[data.name])
+				if(!rooms[escapeHtml(data.name)])
 				{
 					if(data.num >= 2 && data.num <= 4)
 					{
-						createRoom(data.name, data.num)
-						socket.emit("chatMessage", "<font color='mediumseagreen'>Room '" + data.name + "' successfully created!</font>")
+						createRoom(escapeHtml(data.name), data.num)
+						socket.emit("chatMessage", "<font color='mediumseagreen'>Room '" + escapeHtml(data.name) + "' successfully created!</font>")
 						
 						var dat = joinRoom(socket, {room: data.name, name: data.player}, currentRoom);
 
@@ -797,7 +833,7 @@ io.on("connection", function(socket){
 				}
 				else
 				{
-					socket.emit("chatMessage", "<font color='indianred'>Room with name '" + data.name + "' already exists!</font>")
+					socket.emit("chatMessage", "<font color='indianred'>Room with name '" + escapeHtml(data.name) + "' already exists!</font>")
 				}
 			}
 		});
