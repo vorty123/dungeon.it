@@ -1431,7 +1431,7 @@ function render(event) {
 		else
 			manageProgressbar("keychange", progress, "img/key.png", "mediumseagreen");
 
-		if(playersBySocket[socket.id] && players[playersBySocket[socket.id]] && players[playersBySocket[socket.id]][9])
+		if(players[playersBySocket[socket.id]][9])
 		{
 			manageProgressbar("frozen", 100-((getTickCount()-players[playersBySocket[socket.id]][9])/5000)*100, "img/snowflake.png", "#41acba");
 		}
