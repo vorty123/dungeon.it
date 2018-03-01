@@ -474,7 +474,7 @@ function killPlayer(id, by)
 	playerDatas[id].x = x;
 	playerDatas[id].y = y;
 
-	changePlayerDirection(room, id, playerDatas[id].directionTimer, true);
+	changePlayerDirection(room, id, playerDatas[id].directionTimer, 0);
 
 	io.to(room).emit("teleportCharacter", {soc: id, x: x, y: y});
 
@@ -625,16 +625,18 @@ function changePlayerDirection(currentRoom, uid, timer, force)
 {
 	if(playerDatas[uid] && rooms[currentRoom].started)
 	{
+		clearTimeout(playerDatas[uid].directionTimeout);
+
 		var time = randomBetween(7500, 15000);
-		
+
 		roomStructures[currentRoom].timeouts[timer] = setTimeout(changePlayerDirection, time, currentRoom, uid, timer);
 		playerDatas[uid].directionTimeout = roomStructures[currentRoom].timeouts[timer];
 		playerDatas[uid].directionTimer = timer;
 
 		var dir = randomBetween(0, 3);
 
-		if(force)
-			dir = 0
+		if(isNumber(force))
+			dir = force;
 
 		playerDatas[uid].direction = dir*90;
 
@@ -757,7 +759,7 @@ function joinRoom(socket, data, currentRoom)
 
 						for(var uid in users)
 						{
-							changePlayerDirection(currentRoom, uid, timer, true);
+							changePlayerDirection(currentRoom, uid, timer, 0);
 
 							timer ++;
 						}
@@ -985,7 +987,7 @@ io.on("connection", function(socket){
 
 		 						if(roomStructures[currentRoom].objects[roomStructures[currentRoom].pickables[x][y]].id == "hourglass")
 		 						{
-		 							
+		 							changePlayerDirection(currentRoom, socket.id, playerDatas[socket.id].directionTimer, playerDatas[socket.id].direction/90);
 		 							io.to(currentRoom).emit("pickUpObject", {x: x, y: y})
 		 						}
 		 						else
