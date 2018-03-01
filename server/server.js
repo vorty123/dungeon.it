@@ -425,6 +425,40 @@ function killPlayer(id, by)
 function freezePlayer(currentRoom, uid, state)
 {
 	playerDatas[uid].frozen = state
+	
+	if(playerDatas[uid].carrying)
+	{
+		var x = playerDatas[uid].x;
+		var y = playerDatas[uid].y;
+
+		do {
+			x = playerDatas[uid].x;
+			y = playerDatas[uid].y;
+
+			if(randomBetween(1, 2) == 1)
+			{
+				if(randomBetween(1, 2) == 1)
+					x ++;
+				else
+					x --;
+			}
+			else
+			{
+				if(randomBetween(1, 2) == 1)
+					y ++;
+				else
+					y --;
+			}
+		} while(roomStructures[currentRoom].roomCollisions[x][y])
+
+		var id = createObject(currentRoom, playerDatas[uid].carrying, x, y);
+		roomStructures[currentRoom].roomCollisions[x][y] = "pickable";
+		roomStructures[currentRoom].pickables[x][y] = id
+
+		io.to(currentRoom).emit("objectCreated", {id: playerDatas[uid].carrying, x: x, y: y, carrying: uid})
+
+		playerDatas[uid].carrying = false;
+	}
 
 	if(state === false)
 		io.to(currentRoom).emit("freezePlayer", {id: uid, state: false})
@@ -549,145 +583,153 @@ function changePlayerDirection(currentRoom, uid, timer, force)
 function joinRoom(socket, data, currentRoom)
 {
 	var room = escapeHtml(data.room)
-
-	if(!currentRoom && rooms[room] && getRoomUsersLength(room) < rooms[room].neededPlayers && !rooms[room].started && !rooms[room].gameover && !rooms[room].cd)
-	{
-		currentRoom = room;
 	
-
-		var currentSpawnPoint = getRandomSpawnPoint(room);
-
-		var color = "mediumseagreen"
-		var colorname = "green";
-
-		var x = 1;
-		var y = 1;
-
-		switch(currentSpawnPoint)
+	if(data.name.length  >= 1 && data.name.length <= 16)
+	{		
+		if(!currentRoom && rooms[room] && getRoomUsersLength(room) < rooms[room].neededPlayers && !rooms[room].started && !rooms[room].gameover && !rooms[room].cd)
 		{
-			case 1:
-				x = 1;
-				y = 19;
-				color = "darkcyan";
-				colorname = "blue";
-			break;
+			currentRoom = room;
+		
 
-			case 2:
-				x = 19;
-				y = 19;
-				color = "indianred";
-				colorname = "red";
-			break;
+			var currentSpawnPoint = getRandomSpawnPoint(room);
 
-			case 3:
-				x = 19;
-				y = 1;
-				color = "gold";
-				colorname = "yellow";
-			break;
-		}
+			var color = "mediumseagreen"
+			var colorname = "green";
 
-		playerDatas[socket.id] = {
-			x: x,
-			y: y,
-			sx: x,
-			sy: y,
-			color: color,
-			name: escapeHtml(data.name),//"Name",
-			soc: socket.id,
-			room: currentRoom,
-			nextMove: 0,
-		}
+			var x = 1;
+			var y = 1;
 
-		var players = []
-
-		var users = getRoomUsers(room);
-
-		for(var id in users)
-		{
-			players.push(playerDatas[id]);
-		}
-
-		players.push(playerDatas[socket.id]);
-
-		rooms[room].spawnPoints[currentSpawnPoint] = socket.id
-
-		io.to(currentRoom).emit("chatMessage", "<font color='" + color + "'>" + data.name + "</font> joined")
-
-		socket.emit("chatMessage", "Joined room '<font color='indianred'>" + room + "</font>'")
-		socket.emit("chatMessage", "You are color '<font color='" + color + "'>" + colorname + "</font>'")
-
-		io.to(currentRoom).emit("createPlayer", playerDatas[socket.id])
-		socket.emit("sendRoomStructure", {struct: roomStructures[room], name: room, mySpawn: currentSpawnPoint, players: players, collisions: roomStructures[currentRoom].roomCollisions});
-
-		socket.join(room);
-		refreshRoomPlayers(room);
-
-		var needed = rooms[room].neededPlayers-rooms[room].currentPlayers
-
-		if(needed == 0)
-		{
-			io.to(currentRoom).emit("chatMessage",  "<font color='mediumseagreen'>Starting countdown...</font>")
-
-			rooms[currentRoom].cd = true
-			io.to(currentRoom).emit("bigText", {text: false})
-
-			for(var i in roomStructures[currentRoom].timeouts)
+			switch(currentSpawnPoint)
 			{
-				if(roomStructures[currentRoom].timeouts[i])
-					clearTimeout(roomStructures[currentRoom].timeouts[i])
+				case 1:
+					x = 1;
+					y = 19;
+					color = "darkcyan";
+					colorname = "blue";
+				break;
+
+				case 2:
+					x = 19;
+					y = 19;
+					color = "indianred";
+					colorname = "red";
+				break;
+
+				case 3:
+					x = 19;
+					y = 1;
+					color = "gold";
+					colorname = "yellow";
+				break;
 			}
 
-			roomStructures[currentRoom].timeouts = []
-			
-			roomStructures[currentRoom].timeouts[0] = setTimeout(function () { io.to(currentRoom).emit("bigText", {sound: true, text: "READY!", time: 900, size: 1}) }, 2000)
-			roomStructures[currentRoom].timeouts[1] = setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "SET!", time: 900, size: 1}) }, 3000)
-			roomStructures[currentRoom].timeouts[2] = setTimeout(function () { 
-				if(rooms[currentRoom])
+			playerDatas[socket.id] = {
+				x: x,
+				y: y,
+				sx: x,
+				sy: y,
+				color: color,
+				name: escapeHtml(data.name),//"Name",
+				soc: socket.id,
+				room: currentRoom,
+				nextMove: 0,
+			}
+
+			var players = []
+
+			var users = getRoomUsers(room);
+
+			for(var id in users)
+			{
+				players.push(playerDatas[id]);
+			}
+
+			players.push(playerDatas[socket.id]);
+
+			rooms[room].spawnPoints[currentSpawnPoint] = socket.id
+
+			io.to(currentRoom).emit("chatMessage", "<font color='" + color + "'>" + data.name + "</font> joined")
+
+			socket.emit("chatMessage", "Joined room '<font color='indianred'>" + room + "</font>'")
+			socket.emit("chatMessage", "You are color '<font color='" + color + "'>" + colorname + "</font>'")
+
+			io.to(currentRoom).emit("createPlayer", playerDatas[socket.id])
+			socket.emit("sendRoomStructure", {struct: roomStructures[room], name: room, mySpawn: currentSpawnPoint, players: players, collisions: roomStructures[currentRoom].roomCollisions});
+
+			socket.join(room);
+			refreshRoomPlayers(room);
+
+			var needed = rooms[room].neededPlayers-rooms[room].currentPlayers
+
+			if(needed == 0)
+			{
+				io.to(currentRoom).emit("chatMessage",  "<font color='mediumseagreen'>Starting countdown...</font>")
+
+				rooms[currentRoom].cd = true
+				io.to(currentRoom).emit("bigText", {text: false})
+
+				for(var i in roomStructures[currentRoom].timeouts)
 				{
-					io.to(currentRoom).emit("bigText", {text: "<font color='mediumseagreen'>GO!</font>", time: 1500, size: 2})
-					io.to(currentRoom).emit("chatMessage",  "Game <font color='mediumseagreen'>started</font>!")
-					io.to(currentRoom).emit("gameStarted", true)
-
-					rooms[currentRoom].started = true
-					rooms[currentRoom].cd = false
-
-					roomStructures[currentRoom].timeouts = []
-
-					var users = getRoomUsers(currentRoom);
-					var timer = 0;
-
-					for(var uid in users)
-					{
-						changePlayerDirection(currentRoom, uid, timer, true);
-
-						timer ++;
-					}
-
-					io.emit("roomList", rooms)
+					if(roomStructures[currentRoom].timeouts[i])
+						clearTimeout(roomStructures[currentRoom].timeouts[i])
 				}
-			}, 4000)
-		}
-		else if(needed == 1)
-			io.to(currentRoom).emit("chatMessage",  "<font color='mediumseagreen'>" + needed + "</font> more player needed to start game")
-		else
-			io.to(currentRoom).emit("chatMessage",  "<font color='mediumseagreen'>" + needed + "</font> more players needed to start game")
-		
-		console.log("user " + socket.id + " joined room: " + room + ", (Sp: " + currentSpawnPoint + ") users in room: " + rooms[room].currentPlayers)
 
-		return {room: currentRoom, spawnPoint: currentSpawnPoint}
+				roomStructures[currentRoom].timeouts = []
+				
+				roomStructures[currentRoom].timeouts[0] = setTimeout(function () { io.to(currentRoom).emit("bigText", {sound: true, text: "READY!", time: 900, size: 1}) }, 2000)
+				roomStructures[currentRoom].timeouts[1] = setTimeout(function () { io.to(currentRoom).emit("bigText", {text: "SET!", time: 900, size: 1}) }, 3000)
+				roomStructures[currentRoom].timeouts[2] = setTimeout(function () { 
+					if(rooms[currentRoom])
+					{
+						io.to(currentRoom).emit("bigText", {text: "<font color='mediumseagreen'>GO!</font>", time: 1500, size: 2})
+						io.to(currentRoom).emit("chatMessage",  "Game <font color='mediumseagreen'>started</font>!")
+						io.to(currentRoom).emit("gameStarted", true)
+
+						rooms[currentRoom].started = true
+						rooms[currentRoom].cd = false
+
+						roomStructures[currentRoom].timeouts = []
+
+						var users = getRoomUsers(currentRoom);
+						var timer = 0;
+
+						for(var uid in users)
+						{
+							changePlayerDirection(currentRoom, uid, timer, true);
+
+							timer ++;
+						}
+
+						io.emit("roomList", rooms)
+					}
+				}, 4000)
+			}
+			else if(needed == 1)
+				io.to(currentRoom).emit("chatMessage",  "<font color='mediumseagreen'>" + needed + "</font> more player needed to start game")
+			else
+				io.to(currentRoom).emit("chatMessage",  "<font color='mediumseagreen'>" + needed + "</font> more players needed to start game")
+			
+			console.log("user " + socket.id + " joined room: " + room + ", (Sp: " + currentSpawnPoint + ") users in room: " + rooms[room].currentPlayers)
+
+			return {room: currentRoom, spawnPoint: currentSpawnPoint}
+		}
+		else
+		{
+			/*if(rooms[room].started)
+				socket.emit("chatMessage", "<font color='indianred'>Failed to join room '" + room + "'. (Game already started!)</font>")
+			else if(getRoomUsersLength(room) >= rooms[room].neededPlayers)
+				socket.emit("chatMessage", "<font color='indianred'>Failed to join room '" + room + "'. (Player limit reached!)</font>")
+			else
+				socket.emit("chatMessage", "<font color='indianred'>Failed to join room '" + room + "'.</font>")
+			*/
+
+			return false;
+		}
 	}
 	else
 	{
-		/*if(rooms[room].started)
-			socket.emit("chatMessage", "<font color='indianred'>Failed to join room '" + room + "'. (Game already started!)</font>")
-		else if(getRoomUsersLength(room) >= rooms[room].neededPlayers)
-			socket.emit("chatMessage", "<font color='indianred'>Failed to join room '" + room + "'. (Player limit reached!)</font>")
-		else
-			socket.emit("chatMessage", "<font color='indianred'>Failed to join room '" + room + "'.</font>")
-		*/
-
-		return false
+		socket.emit("chatMessage", "<font color='indianred'>Player name needs to be between 1-16 characters long!</font>");
+		return false;
 	}
 }
 
@@ -720,7 +762,7 @@ io.on("connection", function(socket){
 		{
 			if(currentRoom && rooms[currentRoom].started)
 			{
-				if(playerDatas[socket.id].carrying && (!roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x] || !roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y]))
+				if(playerDatas[socket.id].carrying)// && (!roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x] || !roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y]))
 				{	
 					if(data.px != playerDatas[socket.id].x || data.py != playerDatas[socket.id].y)
 					{
@@ -779,7 +821,7 @@ io.on("connection", function(socket){
 							}
 						}
 					}
-					else
+					else if((!roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x] || !roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y]))
 					{
 						var id = createObject(currentRoom, playerDatas[socket.id].carrying, playerDatas[socket.id].x, playerDatas[socket.id].y);
 						roomStructures[currentRoom].roomCollisions[playerDatas[socket.id].x][playerDatas[socket.id].y] = "pickable";
@@ -901,27 +943,37 @@ io.on("connection", function(socket){
 		function(data){
 			if(!currentRoom)
 			{
-				if(!rooms[escapeHtml(data.name)])
+				if(data.player.length  >= 1 && data.player.length <= 16)
 				{
-					if(data.num >= 2 && data.num <= 4)
+					if(data.name.length  >= 1 && data.name.length <= 32)
 					{
-						createRoom(escapeHtml(data.name), data.num)
-						socket.emit("chatMessage", "<font color='mediumseagreen'>Room '" + escapeHtml(data.name) + "' successfully created!</font>")
-						
-						var dat = joinRoom(socket, {room: data.name, name: data.player}, currentRoom);
-
-						if(dat)
+						if(!rooms[escapeHtml(data.name)])
 						{
-							currentRoom = dat.room;
-							currentSpawnPoint = dat.spawnPoint;
-						}
+							if(data.num >= 2 && data.num <= 4)
+							{
+								createRoom(escapeHtml(data.name), data.num)
+								socket.emit("chatMessage", "<font color='mediumseagreen'>Room '" + escapeHtml(data.name) + "' successfully created!</font>")
+								
+								var dat = joinRoom(socket, {room: data.name, name: data.player}, currentRoom);
 
-						console.log("user " + socket.id + " joined room '" + currentRoom + "'")
+								if(dat)
+								{
+									currentRoom = dat.room;
+									currentSpawnPoint = dat.spawnPoint;
+								}
+
+								console.log("user " + socket.id + " joined room '" + currentRoom + "'")
+							}
+						}
+						else
+						{
+							socket.emit("chatMessage", "<font color='indianred'>Room with name '" + escapeHtml(data.name) + "' already exists!</font>")
+						}
 					}
 				}
 				else
 				{
-					socket.emit("chatMessage", "<font color='indianred'>Room with name '" + escapeHtml(data.name) + "' already exists!</font>")
+					socket.emit("chatMessage", "<font color='indianred'>Player name needs to be between 1-16 characters long!</font>")
 				}
 			}
 		});

@@ -120,7 +120,6 @@ $("#muteSound").click(function() {
 	}
 });
 
-//TODO: doesn't allow empty name for player and room & char limit
 $("#createRoom").click(function() {
 	socket.emit("createRoom", {name: $("#roomName").val(), num: $("#roomMaxPlayers").val(), player: $("#name").val()})
 });
