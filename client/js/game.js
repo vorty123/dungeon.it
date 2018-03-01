@@ -121,7 +121,7 @@ $("#muteSound").click(function() {
 });
 
 $("#createRoom").click(function() {
-	socket.emit("createRoom", {name: $("#roomName").val(), num: $("#roomMaxPlayers").val(), player: $("#name").val()})
+	socket.emit("createRoom", {name: $("#roomName").val(), num: parseInt($("#roomMaxPlayers").val()), player: $("#name").val()})
 });
 
 $("#rooms").on("click", "button.joinRoom",
@@ -1414,7 +1414,7 @@ socket.on("directionChange",
 		else
 		{
 			directionChange = false;
-			$("#bars").html();
+			$("#bars").html("");
 		}
 	});
 
