@@ -61,6 +61,7 @@ $("#rooms").hide();
 $("#mainCanvas").hide()
 $("#onlineData").html("")
 $(".bigtext").html("")
+$(".bigtext").hide();
 
 socket.on("roomList", 
 		function(data){
@@ -71,7 +72,7 @@ socket.on("roomList",
 				$("#mainCanvas").hide()
 				$("#onlineData").html("")
 				$(".bigtext").html("")
-				$("#rooms").html("<table id='roomListTable'><tr><td style='text-align: center;'>Room name</td><td colspan='2'>Players</td></tr></table>")
+ $(".bigtext").hide();				$("#rooms").html("<table id='roomListTable'><tr><td style='text-align: center;'>Room name</td><td colspan='2'>Players</td></tr></table>")
 					
 				var count = 0;
 
@@ -425,7 +426,7 @@ function resizeCanvas()
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
 		$(".bigtext").html("")
-	}
+ $(".bigtext").hide();	}
 }
 
 var bitmaps = []
@@ -1158,7 +1159,7 @@ socket.on('connect',
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
 		$(".bigtext").html("")
-
+ $(".bigtext").hide();
 
 		$("#chat").append("<li style='color: mediumseagreen;'>Successfully connected!</li>");
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
@@ -1174,7 +1175,7 @@ socket.on('leftRoom',
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
 		$(".bigtext").html("")
-
+ $(".bigtext").hide();
 		$("#chat").append("<li style='color: indianred;'>Left room</li>");
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
 	});
@@ -1189,7 +1190,7 @@ socket.on('disconnect',
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
 		$(".bigtext").html("")
-
+ $(".bigtext").hide();
 		$("#chat").append("<li style='color: indianred;'>Connection to the server was lost!</li>");
 		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
@@ -1205,7 +1206,7 @@ socket.on('connect_error',
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
 		$(".bigtext").html("")
-
+ $(".bigtext").hide();
 		$("#chat").append("<li style='color: indianred;'>Failed to connect to server!</li>");
 		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
@@ -1215,6 +1216,8 @@ var tmo = false;
 
 socket.on("bigText", 
 	function(data) {
+		$(".bigtext").show();
+
 		if(tmo)
 			clearTimeout(tmo);
 
@@ -1231,7 +1234,7 @@ socket.on("bigText",
 			if(data.time)
 			{
 				$(".bigtext").animate({ "font-size": (200*data.size)+"%" }, data.time);
-				tmo = setTimeout(function () { $(".bigtext").html(""); tmo = false; }, data.time)
+				tmo = setTimeout(function () { $(".bigtext").html(""); $(".bigtext").hide(); tmo = false; }, data.time)
 			}
 			else
 			{
@@ -1240,7 +1243,7 @@ socket.on("bigText",
 		}
 		else
 		{
-			$(".bigtext").html("");
+			$(".bigtext").html(""); $(".bigtext").hide();
 		}
 	});
 

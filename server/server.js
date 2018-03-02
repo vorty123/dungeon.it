@@ -506,7 +506,7 @@ function freezePlayer(currentRoom, uid, state)
 				else
 					y --;
 			}
-		} while(roomStructures[currentRoom].roomCollisions[x][y])
+		} while(roomStructures[currentRoom].roomCollisions[x][y] || x < 1 || y < 1 || x > 19 || y > 19)
 
 		var id = createObject(currentRoom, playerDatas[uid].carrying, x, y);
 		roomStructures[currentRoom].roomCollisions[x][y] = "pickable";
