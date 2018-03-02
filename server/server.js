@@ -104,6 +104,29 @@ var clients = 0
 var rooms = {}
 var roomStructures = {}
 
+function generatePickup()
+{
+	var random = randomBetween(1, 35);
+
+	
+	if(random <= 15)
+	{
+		return "snowflake";
+	}
+	else if(random <= 20)
+	{
+		return "cannonball";
+	}
+	else if(random <= 31)
+	{
+		return "hourglass";
+	}
+	else if(random <= 35)
+	{
+		return "spawnkey";
+	}
+}
+
 stdin.addListener("data", function(d) {
 		var cmdin = d.toString().trim();
 
@@ -130,22 +153,7 @@ stdin.addListener("data", function(d) {
 						
 						if(!roomStructures[room].roomCollisions[x][y])
 						{
-							var rand = ""
-
-							switch(randomBetween(1, 3))
-							{
-								case 1:
-								rand = "snowflake";
-								break;
-
-								case 2:
-								rand = "cannonball";
-								break;
-
-								case 3:
-								rand = "hourglass";
-								break;
-							}
+							var rand = generatePickup();
 
 							var id = createObject(room, rand, x, y);
 
@@ -323,7 +331,7 @@ function generateMap(room)
 
 	/* PICKUPS */
 
-	var objs = randomBetween(15, 20);
+	var objs = randomBetween(20, 25);
 	
 	for(var i=0; i<objs; i++)
 	{
@@ -332,22 +340,9 @@ function generateMap(room)
 		
 		if(!roomCollisions[x][y])
 		{
-			var rand = ""
+			var rand = generatePickup();
 
-			switch(randomBetween(1, 3))
-			{
-				case 1:
-				rand = "snowflake";
-				break;
-
-				case 2:
-				rand = "cannonball";
-				break;
-
-				case 3:
-				rand = "hourglass";
-				break;
-			}
+			
 
 			/*var obj = {
 				id: rand,
@@ -797,6 +792,15 @@ function joinRoom(socket, data, currentRoom)
 	}
 }
 
+function unlockSpawns(currentRoom)
+{
+	roomStructures[currentRoom].roomCollisions[1][1] = null;
+	roomStructures[currentRoom].roomCollisions[1][19] = null;
+	roomStructures[currentRoom].roomCollisions[19][19] = null;
+	roomStructures[currentRoom].roomCollisions[19][1] = null;
+	io.to(currentRoom).emit("spawnLock", false)
+}
+
 io.on("connection", function(socket){
 	clients ++;
 
@@ -988,6 +992,19 @@ io.on("connection", function(socket){
 		 						if(roomStructures[currentRoom].objects[roomStructures[currentRoom].pickables[x][y]].id == "hourglass")
 		 						{
 		 							changePlayerDirection(currentRoom, socket.id, playerDatas[socket.id].directionTimer, playerDatas[socket.id].direction/90);
+		 							io.to(currentRoom).emit("pickUpObject", {x: x, y: y})
+		 						}
+		 						else if(roomStructures[currentRoom].objects[roomStructures[currentRoom].pickables[x][y]].id == "spawnkey")
+		 						{
+		 							roomStructures[currentRoom].roomCollisions[1][1] = "nomove";
+									roomStructures[currentRoom].roomCollisions[1][19] = "nomove";
+									roomStructures[currentRoom].roomCollisions[19][19] = "nomove";
+									roomStructures[currentRoom].roomCollisions[19][1] = "nomove";
+
+									io.to(currentRoom).emit("spawnLock", true)
+
+									roomStructures[currentRoom].timeouts.push(setTimeout(unlockSpawns, 5000, currentRoom));
+
 		 							io.to(currentRoom).emit("pickUpObject", {x: x, y: y})
 		 						}
 		 						else

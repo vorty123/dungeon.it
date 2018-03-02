@@ -454,6 +454,7 @@ function init()
 	queue.loadFile({id:"hourglass_sheet", src:"img/hourglass_sheet.png"});
 	queue.loadFile({id:"speechbubble", src:"img/speechbubble.png"});
 	
+	queue.loadFile({id:"bitmap:spawnkey", src:"img/spawnkey.png"});
 	queue.loadFile({id:"bitmap:cannonball", src:"img/cannonball.png"});
 	queue.loadFile({id:"bitmap:snowflake", src:"img/snowflake.png"});
 
@@ -520,12 +521,12 @@ function handleFileLoad(event)
 		var h = levelBaseSheet.getFrameBounds(0).height;
 		
 		arrows[0] = new createjs.Sprite(levelBaseSheet);
-		arrows[0].gotoAndStop(41);
+		arrows[0].gotoAndStop(51);
 		arrows[0].regX = Math.floor(w/2);
 		arrows[0].regY = Math.floor(h/2);
 
 		arrows[1] = new createjs.Sprite(levelBaseSheet);
-		arrows[1].gotoAndStop(42);
+		arrows[1].gotoAndStop(52);
 		arrows[1].regX = Math.floor(w/2);
 		arrows[1].regY = Math.floor(h/2);
 
@@ -535,7 +536,7 @@ function handleFileLoad(event)
 		arrows[2].regY = Math.floor(h/2);
 
 		arrows[3] = new createjs.Sprite(levelBaseSheet);
-		arrows[3].gotoAndStop(51);
+		arrows[3].gotoAndStop(53);
 		arrows[3].regX = Math.floor(w/2);
 		arrows[3].regY = Math.floor(h/2);
 
@@ -1418,6 +1419,41 @@ socket.on("directionChange",
 		}
 	});
 
+var spawnLock = false;
+
+socket.on("spawnLock",
+	function(data) {
+		if(data)
+		{
+			spawnLock = getTickCount()
+
+			collisions[1][1] = "nomove";
+			collisions[1][19] = "nomove";
+			collisions[19][19] = "nomove";
+			collisions[19][1] = "nomove";
+
+			tiles[1][1].gotoAndStop(32+9);
+			tiles[1][19].gotoAndStop(33+9);
+			tiles[19][19].gotoAndStop(34+9);
+			tiles[19][1].gotoAndStop(35+9);
+		}
+		else
+		{
+			spawnLock = false;
+			manageProgressbar("spawnkey", -1, "img/spawnkey.png", "gold");
+
+			collisions[1][1] = null;
+			collisions[1][19] = null;
+			collisions[19][19] = null;
+			collisions[19][1] = null;
+
+			tiles[1][1].gotoAndStop(32);
+			tiles[1][19].gotoAndStop(33);
+			tiles[19][19].gotoAndStop(34);
+			tiles[19][1].gotoAndStop(35);
+		}
+	});
+
 function render(event) {
 	FPS = Math.floor(1000/event.delta)
 	
@@ -1435,6 +1471,8 @@ function render(event) {
 			manageProgressbar("frozen", 100-((getTickCount()-players[playersBySocket[socket.id]][9])/5000)*100, "img/snowflake.png", "#41acba");
 		}
 		
+		if(spawnLock)
+			manageProgressbar("spawnkey", 100-((getTickCount()-spawnLock)/5000)*100, "img/spawnkey.png", "gold");
 	}
 
 	for(var i in projectiles)
@@ -1455,7 +1493,7 @@ function render(event) {
 			var y = createdObjects[i].y;
 			var obj = objects[x][y];
 			
-			if(obj[1] == "snowflake" || obj[1] == "cannonball" || obj[1] == "hourglass")
+			if(obj[1] == "snowflake" || obj[1] == "cannonball" || obj[1] == "spawnkey" || obj[1] == "hourglass")
 			{
 				objects[x][y][2] += event.delta/500;
 				
