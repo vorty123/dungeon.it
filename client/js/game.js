@@ -1062,6 +1062,7 @@ socket.on("sendRoomStructure",
 		}
 
 		$(".bigtext").css("font-size", "100%");
+		$(".bigtext").show();
 		$(".bigtext").html("Waiting for players...<br><br><button type='button' class='leaveRoom' style='width: 50%; margin: 0 auto;'>Back to menu</button>")
 	});
 

@@ -102,8 +102,6 @@ input, button, select {
 	flex-direction: column;
 	justify-content: center;
 	text-align: center;
-
-	pointer-events: none;
 }
 
 #roomListTable {
