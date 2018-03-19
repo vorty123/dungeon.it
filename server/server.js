@@ -481,46 +481,49 @@ function killPlayer(id, by)
 
 function freezePlayer(currentRoom, uid, state)
 {
-	playerDatas[uid].frozen = state
-	
-	if(playerDatas[uid].carrying)
+	if(playerDatas[uid]) 
 	{
-		var x = playerDatas[uid].x;
-		var y = playerDatas[uid].y;
+		playerDatas[uid].frozen = state
+		
+		if(playerDatas[uid].carrying)
+		{
+			var x = playerDatas[uid].x;
+			var y = playerDatas[uid].y;
 
-		do {
-			x = playerDatas[uid].x;
-			y = playerDatas[uid].y;
+			do {
+				x = playerDatas[uid].x;
+				y = playerDatas[uid].y;
 
-			if(randomBetween(1, 2) == 1)
-			{
 				if(randomBetween(1, 2) == 1)
-					x ++;
+				{
+					if(randomBetween(1, 2) == 1)
+						x ++;
+					else
+						x --;
+				}
 				else
-					x --;
-			}
-			else
-			{
-				if(randomBetween(1, 2) == 1)
-					y ++;
-				else
-					y --;
-			}
-		} while(roomStructures[currentRoom].roomCollisions[x][y] || x < 1 || y < 1 || x > 19 || y > 19)
+				{
+					if(randomBetween(1, 2) == 1)
+						y ++;
+					else
+						y --;
+				}
+			} while(roomStructures[currentRoom].roomCollisions[x][y] || x < 1 || y < 1 || x > 19 || y > 19)
 
-		var id = createObject(currentRoom, playerDatas[uid].carrying, x, y);
-		roomStructures[currentRoom].roomCollisions[x][y] = "pickable";
-		roomStructures[currentRoom].pickables[x][y] = id
+			var id = createObject(currentRoom, playerDatas[uid].carrying, x, y);
+			roomStructures[currentRoom].roomCollisions[x][y] = "pickable";
+			roomStructures[currentRoom].pickables[x][y] = id
 
-		io.to(currentRoom).emit("objectCreated", {id: playerDatas[uid].carrying, x: x, y: y, carrying: uid})
+			io.to(currentRoom).emit("objectCreated", {id: playerDatas[uid].carrying, x: x, y: y, carrying: uid})
 
-		playerDatas[uid].carrying = false;
+			playerDatas[uid].carrying = false;
+		}
+
+		if(state === false)
+			io.to(currentRoom).emit("freezePlayer", {id: uid, state: false})
+		else
+			io.to(currentRoom).emit("freezePlayer", {id: uid, state: true})
 	}
-
-	if(state === false)
-		io.to(currentRoom).emit("freezePlayer", {id: uid, state: false})
-	else
-		io.to(currentRoom).emit("freezePlayer", {id: uid, state: true})
 }
 
 function checkProjectileDeath(currentRoom, timer, id, obj)
