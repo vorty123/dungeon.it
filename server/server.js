@@ -331,7 +331,7 @@ function generateMap(room)
 
 	/* PICKUPS */
 
-	var objs = randomBetween(20, 25);
+	var objs = randomBetween(35, 45);
 	
 	for(var i=0; i<objs; i++)
 	{
@@ -607,8 +607,8 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 
 			if(projectiles[id].obj == "cannonball" || projectiles[id].obj == "snowflake")
 			{
-				if(randomBetween(1, 10) < 8)
-				{
+				/*if(randomBetween(1, 10) < 8)
+				{*/
 					var x = randomBetween(1+1, 19-1);
 					var y = randomBetween(1+1, 19-1);
 
@@ -621,7 +621,7 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 
 						io.to(currentRoom).emit("objectCreated", {id: projectiles[id].obj, x: x, y: y});
 					}
-				}
+				//}
 			}
 
 			delete projectiles[id];
