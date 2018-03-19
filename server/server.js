@@ -519,7 +519,11 @@ function freezePlayer(currentRoom, uid, state)
 					else
 						y --;
 				}
-			} while(roomStructures[currentRoom].roomCollisions[x][y] || x < 1 || y < 1 || x > 19 || y > 19)
+			} while(roomStructures[currentRoom].roomCollisions[x][y] || x < 1 || y < 1 || x > 19 || y > 19 || 			
+																	(x == 1 && y == 1) ||
+																	(x == 1 && y == 19) ||
+																	(x == 19 && y == 19) ||
+																	(x == 19 && y == 1))
 
 			var id = createObject(currentRoom, playerDatas[uid].carrying, x, y);
 			roomStructures[currentRoom].roomCollisions[x][y] = "pickable";
