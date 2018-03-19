@@ -136,6 +136,13 @@ input, button, select {
 	padding-bottom: 10px;
 }
 
+#rooms {
+	width: 50%;
+	margin: 0 auto;
+	overflow-y: auto;
+	overflow-x: visible;
+}
+
 .progressbarOuter {
 	width: 100%;
 	margin-bottom: 10px;

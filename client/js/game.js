@@ -72,8 +72,9 @@ socket.on("roomList",
 				$("#mainCanvas").hide()
 				$("#onlineData").html("")
 				$(".bigtext").html("")
- $(".bigtext").hide();				$("#rooms").html("<table id='roomListTable'><tr><td style='text-align: center;'>Room name</td><td colspan='2'>Players</td></tr></table>")
-					
+				$(".bigtext").hide();				
+				$("#rooms").html("<a href='history.html' style='margin-top: 5px; margin-top: 20px; display: block;'>Game history</a><table id='roomListTable'><tr><td style='text-align: center;'>Room name</td><td colspan='2'>Players</td></tr></table>")
+								
 				var count = 0;
 
 				for(var room in data)
@@ -102,6 +103,7 @@ socket.on("roomList",
 
 				if(count <= 0)
 					$("#roomListTable").append("<tr><td style='text-align: center; line-height: 1.75;' colspan='3'>There are no rooms.<br>Let's create one!</td></tr>");
+
 			}
 		}
 	);
@@ -426,7 +428,10 @@ function resizeCanvas()
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
 		$(".bigtext").html("")
- $(".bigtext").hide();	}
+ 		$(".bigtext").hide();	
+ 	}
+
+	$("#rooms").height(window.innerHeight*0.78-$("#settings").height())
 }
 
 var bitmaps = []
