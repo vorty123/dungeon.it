@@ -477,6 +477,17 @@ function killPlayer(id, by)
 		io.to(room).emit("chatMessage", "<font color='" + playerDatas[id].color + "'>" + playerDatas[id].name + "</font> killed by <font color='" + playerDatas[by].color + "'>" + playerDatas[by].name + "</font>")
 	else
 		io.to(room).emit("chatMessage", "<font color='" + playerDatas[id].color + "'>" + playerDatas[id].name + "</font> killed")
+
+	var timerid = roomStructures[room].timeouts.length;
+
+	if(playerDatas[id].frozen)
+	{
+		timerid = playerDatas[id].frozen
+		clearTimeout(timerid);
+	}
+
+	roomStructures[room].timeouts[timerid] = setTimeout(freezePlayer, 5000, room, id, false);
+	freezePlayer(room, id, timerid)
 }
 
 function freezePlayer(currentRoom, uid, state)
@@ -573,7 +584,6 @@ function checkProjectileDeath(currentRoom, timer, id, obj)
 					}
 
 					roomStructures[currentRoom].timeouts[timerid] = setTimeout(freezePlayer, 5000, currentRoom, uid, false);
-
 					freezePlayer(currentRoom, uid, timerid)
 				}
 			}
