@@ -831,7 +831,7 @@ io.on("connection", function(socket){
 	socket.on("writingChat", 
 		function(data)
 		{
-			if(argumentCheck("argumentCheck", data) && currentRoom)
+			if(argumentCheck("writingChat", data) && currentRoom)
 				io.to(currentRoom).emit("writingChat", {state: data, soc: socket.id});
 		});
 
