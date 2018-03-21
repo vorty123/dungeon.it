@@ -1,4 +1,28 @@
-var socket = io("http://server.getthechest.com:8080");
+
+var getUrlParameter = function getUrlParameter(sParam) {
+	var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+		sURLVariables = sPageURL.split('&'),
+		sParameterName,
+		i;
+
+	for (i = 0; i < sURLVariables.length; i++) {
+		sParameterName = sURLVariables[i].split('=');
+
+		if (sParameterName[0] === sParam) {
+			return sParameterName[1] === undefined ? true : sParameterName[1];
+		}
+	}
+};
+
+var server = "http://server.getthechest.com:8080";
+
+if (getUrlParameter("server"))
+{
+	server = "http://" + getUrlParameter("server") + ":8080"
+	$("#chat").append("<li style='color: gold;'>Custom server: " + getUrlParameter("server") + "</li>");
+}
+
+var socket = io(server);
 //var socket = io("http://192.168.1.7:8080");
 
 function sinDegrees(angle) {
@@ -73,7 +97,7 @@ socket.on("roomList",
 				$("#onlineData").html("")
 				$(".bigtext").html("")
 				$(".bigtext").hide();				
-				$("#rooms").html("<a href='history.html' style='margin-top: 5px; margin-top: 20px; display: block;'>Game history</a><table id='roomListTable'><tr><td style='text-align: center;'>Room name</td><td colspan='2'>Players</td></tr></table>")
+				$("#rooms").html("<table id='roomListTable'><tr><td style='text-align: center;'>Room name</td><td colspan='2'>Players</td></tr></table>")
 								
 				var count = 0;
 
@@ -428,8 +452,8 @@ function resizeCanvas()
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
 		$(".bigtext").html("")
- 		$(".bigtext").hide();	
- 	}
+		$(".bigtext").hide();	
+	}
 
 	$("#rooms").height(window.innerHeight*0.78-$("#settings").height())
 }
@@ -1212,7 +1236,7 @@ socket.on('connect_error',
 		$("#mainCanvas").hide()
 		$("#onlineData").html("")
 		$(".bigtext").html("")
- $(".bigtext").hide();
+ 		$(".bigtext").hide();
 		$("#chat").append("<li style='color: indianred;'>Failed to connect to server!</li>");
 		$("#chat").append("<li style='color: indianred;'>Trying to reconnect...</li>");
 		$("#chat").animate({ scrollTop: $(document).height() }, 400);
